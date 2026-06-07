@@ -1,0 +1,2466 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>拍卖师考试 · 复习练习系统</title>
+<style>
+/* ===== 全局变量与基础样式 ===== */
+:root {
+  --bg: #1a1a2e;
+  --bg2: #16213e;
+  --bg3: #0f3460;
+  --card: #1e2a4a;
+  --card2: #253456;
+  --text: #e0e0e0;
+  --text2: #a0a0b8;
+  --accent: #e94560;
+  --accent2: #f0a500;
+  --green: #4ecca3;
+  --blue: #3498db;
+  --purple: #9b59b6;
+  --red: #e74c3c;
+  --orange: #e67e22;
+  --border: #2a3a5c;
+  --shadow: 0 4px 20px rgba(0,0,0,0.3);
+  --radius: 12px;
+  --transition: 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.7;
+}
+::-webkit-scrollbar { width:6px; }
+::-webkit-scrollbar-track { background:var(--bg); }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+
+/* ===== 顶部导航 ===== */
+header {
+  background: linear-gradient(135deg, var(--bg2), var(--bg3));
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid var(--accent);
+  position: sticky; top:0; z-index:100;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.4);
+}
+header h1 { font-size:1.4em; color:#fff; }
+header h1 span { color:var(--accent); }
+nav { display:flex; gap:8px; flex-wrap:wrap; }
+nav button {
+  background: transparent;
+  color: var(--text2);
+  border: 1px solid var(--border);
+  padding: 8px 18px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+nav button:hover { border-color: var(--accent); color: #fff; }
+nav button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* ===== 主容器 ===== */
+main { max-width:1100px; margin:0 auto; padding:20px 16px 40px; }
+
+/* ===== 面板容器 ===== */
+.panel { display:none; }
+.panel.active { display:block; animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px);} to{opacity:1;transform:translateY(0);} }
+
+/* ===== 筛选栏 ===== */
+.filter-bar {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+  background: var(--card); padding: 16px 20px; border-radius: var(--radius);
+  margin-bottom: 20px; box-shadow: var(--shadow);
+}
+.filter-bar label { font-size:0.85em; color:var(--text2); white-space:nowrap; }
+.filter-bar select, .filter-bar input[type="number"] {
+  background: var(--bg); color: var(--text); border: 1px solid var(--border);
+  padding: 7px 12px; border-radius: 8px; font-size:0.9em; outline:none;
+}
+.filter-bar select:focus { border-color: var(--accent); }
+.filter-bar .btn-group { display:flex; gap:6px; flex-wrap:wrap; }
+.filter-bar .btn-sm {
+  background: var(--bg); color: var(--text2); border: 1px solid var(--border);
+  padding: 6px 14px; border-radius: 16px; cursor: pointer; font-size:0.8em;
+  transition: var(--transition);
+}
+.filter-bar .btn-sm:hover { border-color: var(--accent); color:#fff; }
+.filter-bar .btn-sm.on { background: var(--accent); color:#fff; border-color: var(--accent); }
+.filter-bar .btn-star.on { background: var(--accent2); color: #1a1a2e; border-color: var(--accent2); }
+
+/* ===== 进度条 ===== */
+.progress-wrap {
+  background: var(--card); padding: 12px 20px; border-radius: var(--radius);
+  margin-bottom: 16px; display:flex; align-items:center; gap:14px;
+  box-shadow: var(--shadow);
+}
+.progress-wrap span { font-size:0.85em; color:var(--text2); white-space:nowrap; }
+.progress-bar {
+  flex:1; height:8px; background:var(--bg); border-radius:4px; overflow:hidden;
+}
+.progress-fill { height:100%; background:var(--green); border-radius:4px; transition:width 0.5s; }
+
+/* ===== 题目卡片 ===== */
+.q-card {
+  background: var(--card); border-radius: var(--radius); padding: 24px;
+  margin-bottom: 16px; box-shadow: var(--shadow); border-left:4px solid transparent;
+  transition: var(--transition);
+}
+.q-card.wrong { border-left-color: var(--red); }
+.q-card.hesitate { border-left-color: var(--orange); }
+.q-card.correct { border-left-color: var(--green); }
+.q-header { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+.q-badges { display:flex; gap:6px; flex-wrap:wrap; }
+.q-badge {
+  font-size:0.7em; padding:3px 10px; border-radius:10px; font-weight:bold; white-space:nowrap;
+}
+.q-badge.subject { background:var(--bg3); color:var(--blue); }
+.q-badge.chapter { background:var(--bg3); color:var(--purple); }
+.q-badge.type { background:var(--bg3); color:var(--orange); }
+.q-badge.star { background:var(--accent2); color:#1a1a2e; }
+.q-number { color:var(--accent); font-weight:bold; font-size:0.9em; }
+.q-title { font-size:1.1em; margin-bottom:16px; color:#fff; line-height:1.6; }
+.q-options { display:flex; flex-direction:column; gap:8px; margin-bottom:16px; }
+.q-option {
+  background: var(--bg); padding: 10px 16px; border-radius: 8px; cursor: pointer;
+  border: 2px solid transparent; transition: var(--transition); font-size:0.95em;
+  display:flex; align-items:center; gap:10px;
+}
+.q-option:hover { border-color:var(--blue); background:var(--bg2); }
+.q-option.selected { border-color:var(--blue); background:var(--bg3); }
+.q-option.correct-answer { border-color:var(--green); background:rgba(78,204,163,0.15); }
+.q-option.wrong-answer { border-color:var(--red); background:rgba(231,76,60,0.15); }
+.q-option input[type="radio"], .q-option input[type="checkbox"] { accent-color:var(--accent); flex-shrink:0; }
+.q-check-area { display:flex; gap:10px; align-items:center; margin-bottom:12px; }
+.q-check-area button {
+  padding: 8px 20px; border-radius: 20px; border:none; cursor:pointer;
+  font-size:0.9em; font-weight:bold; transition:var(--transition);
+}
+.btn-check { background:var(--blue); color:#fff; }
+.btn-check:hover { opacity:0.85; }
+.btn-show { background:var(--accent2); color:#1a1a2e; }
+.btn-show:hover { opacity:0.85; }
+
+.q-feedback { padding:12px 16px; border-radius:8px; margin-top:12px; display:none; font-size:0.9em; }
+.q-feedback.show { display:block; }
+.q-feedback.correct { background:rgba(78,204,163,0.15); border:1px solid var(--green); }
+.q-feedback.wrong { background:rgba(231,76,60,0.15); border:1px solid var(--red); }
+
+.self-assess { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; align-items:center; }
+.self-assess span { font-size:0.85em; color:var(--text2); }
+.self-assess button {
+  padding: 6px 16px; border-radius: 16px; border:1px solid var(--border);
+  background:transparent; color:var(--text2); cursor:pointer;
+  font-size:0.8em; transition:var(--transition);
+}
+.self-assess button:hover { border-color:var(--accent); color:#fff; }
+.self-assess button.rate-wrong:hover, .self-assess button.rate-wrong.active { background:var(--red); color:#fff; border-color:var(--red); }
+.self-assess button.rate-hesitate:hover, .self-assess button.rate-hesitate.active { background:var(--orange); color:#fff; border-color:var(--orange); }
+.self-assess button.rate-correct:hover, .self-assess button.rate-correct.active { background:var(--green); color:#fff; border-color:var(--green); }
+
+.note-input { width:100%; margin-top:10px; }
+.note-input textarea {
+  width:100%; background:var(--bg); color:var(--text); border:1px solid var(--border);
+  border-radius:8px; padding:10px; font-size:0.85em; resize:vertical; min-height:60px;
+  font-family: inherit;
+}
+.note-input select {
+  background:var(--bg); color:var(--text); border:1px solid var(--border);
+  padding:6px 10px; border-radius:8px; margin-right:8px; font-size:0.85em;
+}
+.note-input button {
+  background:var(--accent); color:#fff; border:none; padding:6px 16px; border-radius:16px;
+  cursor:pointer; font-size:0.85em; margin-top:6px;
+}
+
+/* ===== 翻页 ===== */
+.pagination { display:flex; gap:10px; justify-content:center; margin-top:20px; align-items:center; }
+.pagination button {
+  background:var(--card); color:var(--text); border:1px solid var(--border);
+  padding:8px 20px; border-radius:20px; cursor:pointer; transition:var(--transition);
+}
+.pagination button:hover:not(:disabled) { border-color:var(--accent); }
+.pagination button:disabled { opacity:0.4; cursor:default; }
+.pagination span { color:var(--text2); font-size:0.9em; }
+
+/* ===== 错题本 ===== */
+.error-stats {
+  display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
+  gap:14px; margin-bottom:20px;
+}
+.error-stat {
+  background:var(--card); padding:18px; border-radius:var(--radius);
+  text-align:center; box-shadow:var(--shadow);
+}
+.error-stat .num { font-size:2.2em; font-weight:bold; color:var(--accent); }
+.error-stat .label { font-size:0.8em; color:var(--text2); margin-top:4px; }
+.root-cause-chart { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px; }
+.root-cause-item {
+  background:var(--card); padding:12px 18px; border-radius:var(--radius);
+  display:flex; align-items:center; gap:10px;
+}
+.root-cause-item .color-dot { width:12px; height:12px; border-radius:50%; }
+.root-cause-item .count { font-weight:bold; font-size:1.2em; }
+
+/* ===== 统计面板 ===== */
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:16px; }
+.stat-module {
+  background:var(--card); padding:20px; border-radius:var(--radius);
+  box-shadow:var(--shadow);
+}
+.stat-module h3 { margin-bottom:12px; color:var(--accent2); font-size:1em; }
+.stat-module .stat-row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--border); font-size:0.85em; }
+.stat-module .stat-row:last-child { border:none; }
+.stat-bar-wrap { flex:1; height:6px; background:var(--bg); border-radius:3px; margin-left:10px; max-width:120px; }
+.stat-bar-fill { height:100%; border-radius:3px; transition:width 0.5s; }
+
+/* ===== 响应式 ===== */
+@media (max-width:768px) {
+  header { flex-direction:row; flex-wrap:wrap; gap:8px; }
+  header h1 { font-size:1.1em; }
+  nav button { padding:6px 10px; font-size:0.75em; }
+  .filter-bar { flex-direction:column; align-items:stretch; }
+  .q-card { padding:16px; }
+  .stats-grid { grid-template-columns:1fr; }
+}
+
+/* ===== 登录页 ===== */
+.login-overlay {
+  position:fixed; inset:0; background:linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 40%, #16213e 100%);
+  display:flex; align-items:center; justify-content:center; z-index:9999;
+}
+.login-box {
+  background:var(--card); padding:48px 40px; border-radius:20px; box-shadow:0 20px 60px rgba(0,0,0,0.5);
+  width:400px; max-width:90vw; text-align:center; border:1px solid var(--border);
+}
+.login-box h1 {
+  font-size:1.8em; color:#fff; margin-bottom:8px; letter-spacing:2px;
+}
+.login-box h1 .sub { display:block; font-size:0.45em; color:var(--accent); margin-top:4px; letter-spacing:4px; }
+.login-box .login-icon { font-size:3em; margin-bottom:16px; }
+.login-box input {
+  width:100%; background:var(--bg); color:var(--text); border:1px solid var(--border);
+  padding:12px 16px; border-radius:10px; font-size:1em; margin-bottom:14px; outline:none;
+  transition:var(--transition);
+}
+.login-box input:focus { border-color:var(--accent); }
+.login-box button {
+  width:100%; background:var(--accent); color:#fff; border:none; padding:12px;
+  border-radius:10px; font-size:1.1em; cursor:pointer; font-weight:bold;
+  transition:var(--transition); letter-spacing:2px;
+}
+.login-box button:hover { opacity:0.85; transform:translateY(-1px); }
+.login-box .login-error { color:var(--red); font-size:0.85em; margin-top:8px; min-height:20px; }
+.login-box .login-hint { color:var(--text2); font-size:0.75em; margin-top:16px; }
+
+/* ===== 用户信息栏 ===== */
+.user-bar {
+  display:flex; align-items:center; gap:10px; margin-left:auto;
+  font-size:0.85em; color:var(--text2);
+}
+.user-bar .user-name { color:var(--accent2); font-weight:bold; }
+.user-bar .btn-logout {
+  background:transparent; color:var(--text2); border:1px solid var(--border);
+  padding:4px 12px; border-radius:12px; cursor:pointer; font-size:0.8em;
+  transition:var(--transition);
+}
+.user-bar .btn-logout:hover { border-color:var(--red); color:var(--red); }
+
+/* ===== 管理面板表格 ===== */
+.admin-table { width:100%; border-collapse:collapse; margin-top:16px; font-size:0.9em; }
+.admin-table th, .admin-table td { padding:10px 14px; border:1px solid var(--border); text-align:left; }
+.admin-table th { background:var(--bg3); color:var(--accent2); }
+.admin-table td { background:var(--bg); }
+.admin-table .btn-sm-del { background:var(--red); color:#fff; border:none; padding:4px 10px; border-radius:8px; cursor:pointer; font-size:0.8em; }
+.admin-form { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-bottom:20px; }
+.admin-form input {
+  background:var(--bg); color:var(--text); border:1px solid var(--border);
+  padding:8px 12px; border-radius:8px; font-size:0.9em; outline:none;
+}
+.admin-form input:focus { border-color:var(--accent); }
+.admin-form button {
+  background:var(--accent); color:#fff; border:none; padding:8px 18px;
+  border-radius:8px; cursor:pointer; font-size:0.9em;
+}
+
+/* ===== 教材查看 ===== */
+.book-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:16px; }
+.book-card {
+  background:var(--card); border-radius:var(--radius); padding:20px; text-align:center;
+  box-shadow:var(--shadow); cursor:pointer; transition:var(--transition);
+  border:2px solid transparent;
+}
+.book-card:hover { border-color:var(--accent); transform:translateY(-2px); }
+.book-card .book-icon { font-size:2.5em; margin-bottom:10px; }
+.book-card .book-name { font-size:0.95em; color:#fff; margin-bottom:4px; }
+.book-card .book-type { font-size:0.75em; color:var(--text2); }
+.book-card .book-actions { display:flex; gap:6px; justify-content:center; margin-top:10px; }
+.book-card .book-actions button { font-size:0.75em; padding:4px 12px; border-radius:12px; border:1px solid var(--border); background:transparent; color:var(--text2); cursor:pointer; transition:var(--transition); }
+.book-card .book-actions button:hover { border-color:var(--accent); color:#fff; }
+
+/* ===== 查看器弹窗 ===== */
+.viewer-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:10000;
+  display:flex; flex-direction:column;
+}
+.viewer-toolbar {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:12px 20px; background:var(--bg2); border-bottom:1px solid var(--border);
+}
+.viewer-toolbar span { color:#fff; font-size:1em; }
+.viewer-toolbar button {
+  background:transparent; color:#fff; border:1px solid var(--border);
+  padding:6px 16px; border-radius:16px; cursor:pointer; font-size:0.9em;
+}
+.viewer-toolbar button:hover { border-color:var(--red); }
+.viewer-body {
+  flex:1; display:flex; align-items:center; justify-content:center;
+  overflow:auto; padding:20px;
+}
+.viewer-body iframe { width:100%; height:100%; border:none; background:#fff; border-radius:8px; }
+.viewer-body img { max-width:100%; max-height:100%; object-fit:contain; border-radius:8px; }
+.viewer-body .viewer-unsupported { text-align:center; color:var(--text2); }
+.viewer-body .viewer-unsupported button {
+  margin-top:16px; background:var(--accent); color:#fff; border:none;
+  padding:10px 24px; border-radius:20px; cursor:pointer; font-size:1em;
+}
+</style>
+</head>
+<body>
+
+<!-- ==================== 登录页 ==================== -->
+<div class="login-overlay" id="loginOverlay" style="display:none;">
+  <div class="login-box">
+    <div class="login-icon">🔨</div>
+    <h1 id="loginTitle">威拍拍卖师秘籍<span class="sub">WEIPAI AUCTIONEER SYSTEM</span></h1>
+    <input type="text" id="loginUser" placeholder="请输入账号" autocomplete="off" onkeydown="if(event.key==='Enter')login()">
+    <input type="password" id="loginPass" placeholder="请输入密码" onkeydown="if(event.key==='Enter')login()">
+    <button onclick="login()">登 录</button>
+    <div class="login-error" id="loginError"></div>
+    <div class="login-hint">如需注册新账号，请联系管理员</div>
+  </div>
+</div>
+
+<!-- ==================== 主应用 ==================== -->
+<div id="app-container">
+
+<header>
+  <h1>🔨 <span id="headerTitle">威拍拍卖师秘籍</span></h1>
+  <div style="display:flex;flex-direction:column;gap:6px;flex:1;align-items:flex-end;">
+    <div class="user-bar">
+      <span>👤 <span class="user-name" id="displayUser"></span></span>
+      <button class="btn-logout" onclick="logout()">退出登录</button>
+    </div>
+    <nav>
+      <button onclick="switchPanel('practice')" class="active" id="nav-practice">📝 练习</button>
+      <button onclick="switchPanel('errors')" id="nav-errors">📕 错题本</button>
+      <button onclick="switchPanel('stats')" id="nav-stats">📊 统计</button>
+      <button onclick="switchPanel('textbooks')" id="nav-textbooks">📚 教材</button>
+      <button onclick="switchPanel('admin')" id="nav-admin" style="display:none;">⚙️ 管理</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+<!-- ==================== 练习模式 ==================== -->
+<div class="panel active" id="panel-practice">
+  <div class="filter-bar">
+    <label>科目：</label>
+    <select id="filterSubject" onchange="applyFilters()">
+      <option value="all">全部科目</option>
+      <option value="概论">拍卖概论</option>
+      <option value="法律">拍卖法律教程</option>
+      <option value="实务">拍卖实务</option>
+    </select>
+    <label>章节：</label>
+    <select id="filterChapter" onchange="applyFilters()">
+      <option value="all">全部章节</option>
+    </select>
+    <label>题型：</label>
+    <div class="btn-group" id="filterType">
+      <button class="btn-sm on" data-type="all" onclick="toggleTypeFilter(this)">全部</button>
+      <button class="btn-sm" data-type="single" onclick="toggleTypeFilter(this)">单选</button>
+      <button class="btn-sm" data-type="multi" onclick="toggleTypeFilter(this)">多选</button>
+      <button class="btn-sm" data-type="case" onclick="toggleTypeFilter(this)">案例分析</button>
+      <button class="btn-sm" data-type="essay" onclick="toggleTypeFilter(this)">论述</button>
+    </div>
+    <button class="btn-sm btn-star" id="btnStarOnly" onclick="toggleStarFilter()">⭐ 仅看重点题</button>
+    <label style="margin-left:8px;">数量：</label>
+    <input type="number" id="filterCount" value="20" min="5" max="200" style="width:70px;" onchange="applyFilters()">
+    <button class="btn-sm" onclick="randomizeQuestions()" style="background:var(--accent);color:#fff;border-color:var(--accent);">🎲 随机抽题</button>
+    <button class="btn-sm" onclick="resetAllProgress()" style="background:transparent;color:var(--red);border-color:var(--red);">🔄 重置进度</button>
+  </div>
+
+  <div class="progress-wrap">
+    <span>📋 当前进度：</span>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    <span id="progressText">0 / 0</span>
+    <span>✅<span id="countCorrect">0</span></span>
+    <span>⚡<span id="countHesitate">0</span></span>
+    <span>❌<span id="countWrong">0</span></span>
+    <span>⬜<span id="countUnanswered">0</span></span>
+  </div>
+
+  <div id="questionContainer"></div>
+  <div class="pagination" id="pagination"></div>
+</div>
+
+<!-- ==================== 错题本 ==================== -->
+<div class="panel" id="panel-errors">
+  <div class="error-stats" id="errorStats"></div>
+  <div class="root-cause-chart" id="rootCauseChart"></div>
+  <div class="filter-bar">
+    <label>根因筛选：</label>
+    <select id="errorCauseFilter" onchange="renderErrorBook()">
+      <option value="all">全部</option>
+      <option value="概念混淆">概念混淆</option>
+      <option value="遗忘">遗忘</option>
+      <option value="理解偏差">理解偏差</option>
+      <option value="审题大意">审题大意</option>
+    </select>
+    <label>科目筛选：</label>
+    <select id="errorSubjectFilter" onchange="renderErrorBook()">
+      <option value="all">全部科目</option>
+      <option value="概论">拍卖概论</option>
+      <option value="法律">拍卖法律教程</option>
+      <option value="实务">拍卖实务</option>
+    </select>
+    <button class="btn-sm" onclick="exportErrors()" style="margin-left:auto;">📤 导出错题</button>
+    <button class="btn-sm" onclick="clearAllErrors()" style="background:transparent;color:var(--red);border-color:var(--red);">🗑️ 清空错题本</button>
+  </div>
+  <div id="errorBookContainer"></div>
+</div>
+
+<!-- ==================== 统计面板 ==================== -->
+<div class="panel" id="panel-stats">
+  <h2 style="margin-bottom:20px;">📊 学习统计</h2>
+  <div class="stats-grid" id="statsGrid"></div>
+  <div style="background:var(--card);padding:20px;border-radius:var(--radius);margin-top:16px;box-shadow:var(--shadow);">
+    <h3 style="margin-bottom:12px;">📈 各模块掌握率</h3>
+    <div id="moduleMastery"></div>
+  </div>
+  <div style="background:var(--card);padding:20px;border-radius:var(--radius);margin-top:16px;box-shadow:var(--shadow);">
+    <h3 style="margin-bottom:12px;">🔍 薄弱环节分析</h3>
+    <div id="weakAreas"></div>
+  </div>
+</div>
+
+<!-- ==================== 教材查看 ==================== -->
+<div class="panel" id="panel-textbooks">
+  <h2 style="margin-bottom:20px;">📚 教材查看</h2>
+  <div class="book-grid" id="bookGrid">
+    <div style="text-align:center;padding:60px;color:var(--text2);grid-column:1/-1;">
+      <p style="font-size:2em;">📭</p><p>暂无教材，请联系管理员上传</p>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 查看器弹窗 ==================== -->
+<div class="viewer-overlay" id="viewerOverlay" style="display:none;">
+  <div class="viewer-toolbar">
+    <span id="viewerTitle">教材查看</span>
+    <button onclick="closeViewer()">✕ 关闭</button>
+  </div>
+  <div class="viewer-body" id="viewerBody"></div>
+</div>
+
+<!-- ==================== 管理后台 ==================== -->
+<div class="panel" id="panel-admin">
+  <h2 style="margin-bottom:20px;">⚙️ 管理后台</h2>
+
+  <div style="background:var(--card);padding:24px;border-radius:var(--radius);margin-bottom:20px;box-shadow:var(--shadow);">
+    <h3 style="margin-bottom:16px;color:var(--accent2);">📝 修改系统标题</h3>
+    <div class="admin-form">
+      <input type="text" id="adminNewTitle" placeholder="输入新标题" style="flex:1;min-width:200px;" value="">
+      <button onclick="changeSystemTitle()">更新标题</button>
+    </div>
+    <div id="adminTitleMsg" style="font-size:0.85em;margin-top:8px;"></div>
+  </div>
+
+  <div style="background:var(--card);padding:24px;border-radius:var(--radius);margin-bottom:20px;box-shadow:var(--shadow);">
+    <h3 style="margin-bottom:16px;color:var(--accent2);">🔑 修改管理员密码</h3>
+    <div class="admin-form">
+      <input type="password" id="adminOldPass" placeholder="原密码">
+      <input type="password" id="adminNewPass1" placeholder="新密码">
+      <input type="password" id="adminNewPass2" placeholder="确认新密码">
+      <button onclick="changeAdminPassword()">更新密码</button>
+    </div>
+    <div id="adminPwdMsg" style="font-size:0.85em;margin-top:8px;"></div>
+  </div>
+
+  <div style="background:var(--card);padding:24px;border-radius:var(--radius);box-shadow:var(--shadow);">
+    <h3 style="margin-bottom:16px;color:var(--accent2);">👥 用户管理</h3>
+    <div style="margin-bottom:16px;color:var(--text2);font-size:0.85em;">
+      当前用户总数：<b id="userCount" style="color:#fff;">0</b>
+    </div>
+    <div class="admin-form" style="margin-bottom:20px;">
+      <input type="text" id="newUsername" placeholder="新用户账号">
+      <input type="password" id="newUserPass" placeholder="新用户密码">
+      <button onclick="addUser()">➕ 添加用户</button>
+    </div>
+    <div id="userTableContainer"></div>
+  </div>
+
+  <div style="background:var(--card);padding:24px;border-radius:var(--radius);margin-top:20px;box-shadow:var(--shadow);">
+    <h3 style="margin-bottom:16px;color:var(--accent2);">📚 教材管理</h3>
+    <div class="admin-form" style="margin-bottom:20px;">
+      <input type="text" id="bookName" placeholder="教材名称" style="min-width:160px;">
+      <input type="file" id="bookFileInput" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onchange="var f=this.files[0];if(f){document.getElementById('bookName').value=f.name;document.getElementById('bookAdminMsg').innerHTML='<span style=\'color:var(--blue);\'>📎 已选择：'+f.name+'（'+Math.round(f.size/1024)+'KB）</span>';}">
+      <button onclick="uploadBook()">📤 上传教材</button>
+    </div>
+    <div id="bookAdminMsg" style="font-size:0.85em;margin-bottom:12px;"></div>
+    <div id="bookAdminTable"></div>
+  </div>
+</div>
+
+</main>
+</div><!-- /app-container -->
+
+<script>
+// ===================================================================
+// 题库数据（从 Obsidian 仓库提取）
+// ===================================================================
+const QUESTION_BANK = [];
+
+// 辅助函数
+function Q(subject, module, chapter, type, number, isStar, title, options, answer, explanation, relatedPage) {
+  const id = `${subject}-${chapter}-${type}-${number}`;
+  return { id, subject, module, chapter, type, number, isStar, title, options, answer, explanation: explanation || '', relatedPage: relatedPage || '' };
+}
+
+// ==================== 概论科 第一章 拍卖概述 ====================
+const gailunCh1 = [
+  Q('概论','拍卖经济学','第一章 拍卖概述','single',1,true,
+    '拍卖的起源最早可追溯至哪个文明？',
+    ['古罗马','古巴比伦','古埃及','古希腊'],
+    1, '拍卖最早起源于古巴比伦，公元前500年左右巴比伦已有拍卖奴隶和婚姻的市场。','拍卖基础理论'),
+  Q('概论','拍卖经济学','第一章 拍卖概述','single',2,false,
+    '下列哪项不属于拍卖的功能？',
+    ['价格发现','优化资源配置','降低交易成本','拓展销售渠道'],
+    3, '拍卖增加交易成本（佣金、公告费等），而非降低。','拍卖基础理论'),
+  Q('概论','拍卖经济学','第一章 拍卖概述','single',3,true,
+    '拍卖交易与普通交易的主要区别在于？',
+    ['买卖双方直接协商价格','通过公开竞价决定价格','交易标的仅限于有形财产','无需中介参与'],
+    1, '拍卖的核心特征是通过公开竞价机制决定价格，区别于普通协商交易。','拍卖基础理论'),
+  Q('概论','拍卖经济学','第一章 拍卖概述','single',4,false,
+    '我国最早恢复拍卖行的城市是？',
+    ['上海','北京','广州','天津'],
+    2, '1986年国营广州拍卖行成立，标志着我国拍卖制度正式恢复。','拍卖基础理论'),
+  Q('概论','拍卖经济学','第一章 拍卖概述','single',5,true,
+    '最适合采用荷兰式拍卖的商品是？',
+    ['文物艺术品','易腐烂变质的商品','不动产','无形资产'],
+    1, '荷兰式拍卖（减价拍卖）适合易腐烂变质商品，如鲜花、果蔬。','拍卖类型与方式'),
+  Q('概论','拍卖经济学','第一章 拍卖概述','multi',1,false,
+    '影响拍卖产业发展的因素有？',
+    ['全球化','计划经济','科技发展','法律政策'],
+    [0,2,3], '全球化、科技进步、法律政策均推动拍卖产业发展，计划经济抑制市场。','拍卖基础理论'),
+  Q('概论','拍卖经济学','第一章 拍卖概述','multi',2,true,
+    '拍卖的基本要素包括？',
+    ['特定的交易对象','公开方式进行','买卖双方私下协商','价高者得的规则'],
+    [0,1,3], '拍卖三要素：特定交易对象+公开竞价+价高者得。','拍卖基础理论'),
+  Q('概论','拍卖经济学','第一章 拍卖概述','multi',3,true,
+    '下列选项中，不属于拍卖价格形成机制的有？',
+    ['卖方单独定价','买卖双方议价','买方集体竞价','政府定价'],
+    [0,1,3], '拍卖价格由买方集体竞价形成，而非卖方单方定价或议价。','拍卖基础理论'),
+  Q('概论','拍卖经济学','第一章 拍卖概述','multi',4,false,
+    '传统的拍卖方式主要有？',
+    ['英格兰式拍卖','荷兰式拍卖','第一价格密封拍卖','网络拍卖'],
+    [0,1,2], '网络拍卖是新兴方式，前三者传统。','拍卖类型与方式'),
+  Q('概论','拍卖经济学','第一章 拍卖概述','multi',5,true,
+    '下列关于拍卖产生发展顺序，表述错误的是？',
+    ['拍卖行为→拍卖机构→拍卖业→网络拍卖','拍卖机构→拍卖行为→拍卖业→网络拍卖','拍卖业→拍卖行为→拍卖机构→网络拍卖','拍卖机构→拍卖业→拍卖行为→网络拍卖'],
+    [1,2,3], '正确顺序：先有拍卖行为→再有拍卖机构→形成拍卖业→网络拍卖。','拍卖基础理论'),
+  Q('概论','拍卖经济学','第一章 拍卖概述','case',1,true,
+    '二手设备交易中，卖家通过经销商/私人交易面临时间与金钱双重成本，而拍卖提供高成交性、高竞争性的交易方式。请结合拍卖的功能，说明二手设备更适合采用拍卖方式进行交易。',
+    [], null, '要点：①拍卖的价格发现功能使二手设备获得公允市场价；②公开竞价降低信息不对称；③拍卖的竞争机制提高成交效率；④拓展销售渠道，聚集买家。','拍卖基础理论'),
+  Q('概论','拍卖经济学','第一章 拍卖概述','essay',1,true,
+    '结合全球化背景，论述拍卖产业的未来发展趋势',
+    [], null, '要点：①国际化程度加深，跨境拍卖增多；②数字化转型，AI/区块链技术应用；③专业化分工细化；④从交易中介向综合服务平台转型。','拍卖基础理论'),
+  Q('概论','拍卖经济学','第一章 拍卖概述','essay',2,true,
+    '试述英格兰式拍卖与荷兰式拍卖的优缺点及适用场景',
+    [], null, '要点：英格兰式（增价）——优：价格发现充分、竞争透明；缺：耗时长。适用艺术品、不动产。荷兰式（减价）——优：速度快；缺：价格发现不充分。适用鲜花、果蔬等易腐品。','拍卖类型与方式'),
+];
+QUESTION_BANK.push(...gailunCh1);
+
+// ==================== 概论科 第二章 拍卖法律规范体系 ====================
+const gailunCh2 = [
+  Q('概论','拍卖法律制度','第二章 拍卖法律规范体系','single',1,true,
+    '下列哪项不属于拍卖法律的渊源？',
+    ['宪法','行政法规','行业惯例','司法解释'],
+    2, '法律渊源包括宪法、法律、行政法规、司法解释等规范性文件，行业惯例不是法律渊源。','拍卖法律制度'),
+  Q('概论','拍卖法律制度','第二章 拍卖法律规范体系','single',2,true,
+    '下列哪部法律是专门规范拍卖活动的基本法？',
+    ['《民法典》','《拍卖法》','《文物保护法》','《公司法》'],
+    1, '《拍卖法》是专门规范拍卖活动的基本法律。','中华人民共和国拍卖法'),
+  Q('概论','拍卖法律制度','第二章 拍卖法律规范体系','single',3,true,
+    '根据拍卖法律规范内容，《拍卖法》属于？',
+    ['专门性法规','专门性部门规章','专门性法律','专门性司法解释'],
+    2, '《拍卖法》由全国人大常委会制定，属于专门性法律。','中华人民共和国拍卖法'),
+  Q('概论','拍卖法律制度','第二章 拍卖法律规范体系','single',4,false,
+    '拍卖人的设立要遵守《拍卖法》和？',
+    ['《企业法》','《公司法》','《合伙企业法》','《消费者权益保护法》'],
+    1, '拍卖人须依《拍卖法》和《公司法》设立。','拍卖管理办法'),
+  Q('概论','拍卖法律制度','第二章 拍卖法律规范体系','single',5,true,
+    '《拍卖法》的制定机关是？',
+    ['国务院','最高人民法院','全国人大常委会','商务部'],
+    2, '《拍卖法》由全国人大常委会制定。','中华人民共和国拍卖法'),
+  Q('概论','拍卖法律制度','第二章 拍卖法律规范体系','multi',1,true,
+    '《拍卖法》的立法目的包括？',
+    ['规范拍卖行为','维护拍卖秩序','提高拍卖佣金','保护当事人权益'],
+    [0,1,3], '立法目的为三方面：规范行为+维护秩序+保护权益。','中华人民共和国拍卖法'),
+  Q('概论','拍卖法律制度','第二章 拍卖法律规范体系','multi',2,true,
+    '《拍卖法》的适用范围不包括？',
+    ['境外拍卖企业在境内的活动','中国企业在境外的拍卖活动','个人之间的私下交易','网络平台的自营销售'],
+    [2,3], '个人私下交易和平台自营销售不适用《拍卖法》。','中华人民共和国拍卖法'),
+  Q('概论','拍卖法律制度','第二章 拍卖法律规范体系','multi',3,false,
+    '法律的时间效力包括？',
+    ['生效时间','终止效力时间','空间范围','溯及力'],
+    [0,1,3], '空间范围属于空间效力而非时间效力。','相关法律法规索引'),
+  Q('概论','拍卖法律制度','第二章 拍卖法律规范体系','multi',4,true,
+    '下列文件属于司法解释的有？',
+    ['《拍卖管理办法》','最高法关于民事执行拍卖的规定','最高法关于网络司法拍卖的规定','最高法关于执行工作的规定'],
+    [1,2,3], '《拍卖管理办法》是部门规章，非司法解释。','相关法律法规索引'),
+  Q('概论','拍卖法律制度','第二章 拍卖法律规范体系','multi',5,false,
+    '《艺术品经营管理办法》确立的新内容有？',
+    ['明示担保制度','尽职调查制度','信用监管制度','专家委员会制度'],
+    [0,1,2], '明示担保、尽职调查、信用监管三项制度。','相关法律法规索引'),
+  Q('概论','拍卖法律制度','第二章 拍卖法律规范体系','case',1,true,
+    '2015年《拍卖法》修订背景：商事制度改革，将"设立拍卖企业"改为"企业申请取得从事拍卖业务的许可"，删去第六十八条。请结合我国商事制度改革背景，分析《拍卖法》修订对拍卖业发展产生的积极效果。',
+    [], null, '要点：①降低准入门槛，激发市场活力；②先照后证改革减少审批环节；③删除不合时宜条款；④促进拍卖行业市场化竞争。','中华人民共和国拍卖法'),
+  Q('概论','拍卖法律制度','第二章 拍卖法律规范体系','essay',1,true,
+    '试论述拍卖法的适用范围',
+    [], null, '要点：①主体范围——依法设立的拍卖企业；②地域范围——中国境内；③行为范围——拍卖活动；④排除：个人处置物品、法院直接司法拍卖等。','中华人民共和国拍卖法'),
+  Q('概论','拍卖法律制度','第二章 拍卖法律规范体系','essay',2,true,
+    '试论述拍卖法立法的目的',
+    [], null, '要点：①规范拍卖行为，维护拍卖秩序；②保护拍卖活动各方当事人的合法权益；③促进拍卖业的健康发展。','中华人民共和国拍卖法'),
+];
+QUESTION_BANK.push(...gailunCh2);
+
+// ==================== 概论科 第三章 基本原则与规则 ====================
+const gailunCh3 = [
+  Q('概论','拍卖法律制度','第三章 基本原则与规则','single',1,true,
+    '"声明不保证"条款主要影响？',
+    ['价高者得规则','保留价规则','瑕疵请求权规则','公开原则'],
+    2, '声明不保证真伪或品质的免责声明，主要影响瑕疵请求权规则的适用。','中华人民共和国拍卖法'),
+  Q('概论','拍卖法律制度','第三章 基本原则与规则','single',2,true,
+    '拍卖标的的展示时间至少为？',
+    ['1日','2日','3日','5日'],
+    2, '《拍卖法》第48条规定，拍卖标的展示时间不得少于两日。','拍卖程序与流程'),
+  Q('概论','拍卖法律制度','第三章 基本原则与规则','single',3,true,
+    '下列哪项行为违反了公正原则？',
+    ['拍卖人公开拍卖公告','委托人参与竞买','拍卖师宣布拍卖规则','竞买人查看拍卖标的'],
+    1, '委托人参与竞买违反了公正原则，也触犯《拍卖法》禁止性规定。','拍卖师职业道德'),
+  Q('概论','拍卖法律制度','第三章 基本原则与规则','single',4,false,
+    '诚实信用原则的法律依据是？',
+    ['《拍卖法》','《民法典》','《公司法》','《消费者权益保护法》'],
+    1, '诚实信用原则是《民法典》第7条确立的基本原则，适用于拍卖活动。','相关法律法规索引'),
+  Q('概论','拍卖法律制度','第三章 基本原则与规则','single',5,true,
+    '保留价的确定权属于？',
+    ['拍卖人','委托人','竞买人','买受人'],
+    1, '保留价由委托人确定，拍卖人不得擅自变更。','拍卖程序与流程'),
+  Q('概论','拍卖法律制度','第三章 基本原则与规则','multi',1,true,
+    '拍卖的基本原则包括？',
+    ['公开原则','公平原则','公正原则','诚实信用原则'],
+    [0,1,2,3], '拍卖四大基本原则：公开、公平、公正、诚实信用。','拍卖师职业道德'),
+  Q('概论','拍卖法律制度','第三章 基本原则与规则','multi',2,true,
+    '公开原则的具体体现包括？',
+    ['拍卖公告制度','拍卖标的展示制度','拍卖会公开举行','委托人身份保密制度'],
+    [0,1,2], '公开体现为公告、展示、公开举行三方面。委托人在特定情况下可保密。','拍卖程序与流程'),
+  Q('概论','拍卖法律制度','第三章 基本原则与规则','multi',3,true,
+    '下列哪些行为违反了公正原则？',
+    ['委托人参与竞买','拍卖人参与竞买','竞买人之间恶意串通','拍卖师宣布拍卖规则'],
+    [0,1,2], '委托人/拍卖人参与竞买、竞买人串通均违反公正原则。','拍卖师职业道德'),
+  Q('概论','拍卖法律制度','第三章 基本原则与规则','multi',4,false,
+    '价高者得规则的效力范围包括？',
+    ['对竞买人的约束力','对拍卖人的约束力','对委托人的约束力','对买受人的约束力'],
+    [0,1], '价高者得主要约束竞买人和拍卖人。','中华人民共和国拍卖法'),
+  Q('概论','拍卖法律制度','第三章 基本原则与规则','multi',5,false,
+    '瑕疵请求权规则的制约因素包括？',
+    ['委托人和拍卖人无过错','买受人自己的过错','拍卖人声明不保证','显而易见的瑕疵'],
+    [0,1,2,3], '四项均为瑕疵请求权的制约因素。','中华人民共和国拍卖法'),
+  Q('概论','拍卖法律制度','第三章 基本原则与规则','case',1,true,
+    '英国法院审理某买受人诉艺术品拍卖行一案——拍卖行目录鉴定一对念珠为18世纪，买受人拍得后鉴定为19世纪中叶。法院认为拍卖行经科学检测得出的鉴定意见已尽责，不承担告知"不切实际的怀疑"的义务。问题：1.英国法院的判决是否合理？2.结合瑕疵请求权规则说明。',
+    [], null, '要点：①判决合理——拍卖行已尽合理鉴定义务；②瑕疵请求权受"声明不保证"和"买受人过错"制约；③拍卖行无明知瑕疵情形，免责有效。','中华人民共和国拍卖法'),
+  Q('概论','拍卖法律制度','第三章 基本原则与规则','essay',1,true,
+    '试论述价高者得规则的原理',
+    [], null, '要点：①价高者得是拍卖的核心规则；②通过公开竞价实现价格发现；③最高应价经拍卖师落槌确认后成交；④确保交易的公平性和竞争性。','拍卖基础理论'),
+  Q('概论','拍卖法律制度','第三章 基本原则与规则','essay',2,true,
+    '试论述瑕疵请求权规则的效力范围',
+    [], null, '要点：①委托人说明瑕疵的义务；②拍卖人审查和告知义务；③瑕疵担保免责声明的边界——明知瑕疵时免责无效；④买受人自身的注意义务。','中华人民共和国拍卖法'),
+];
+QUESTION_BANK.push(...gailunCh3);
+
+// ==================== 概论科 第四章 拍品与价格机制 ====================
+const gailunCh4 = [
+  Q('概论','拍卖经济学','第四章 拍品与价格机制','single',1,true,
+    '下列哪种财产可以作为拍卖标的？',
+    ['毒品','国有土地所有权','限制流通的文物(经审批)','枪支'],
+    2, '限制流通文物经审批可拍卖。毒品、枪支为禁止流通物，国有土地所有权不可转让。','拍卖标的与分类'),
+  Q('概论','拍卖经济学','第四章 拍品与价格机制','single',2,true,
+    '根据拍卖标的的所有权属性，拍卖标的可划分为？',
+    ['有形财产和无形财产','动产和不动产','强制委托和自愿委托','国有资产和非国有资产'],
+    2, '按委托意愿划分：强制委托（司法拍卖）和自愿委托（商业拍卖）。','拍卖标的与分类'),
+  Q('概论','拍卖经济学','第四章 拍品与价格机制','single',3,true,
+    '第二价格密封拍卖的优点是？',
+    ['鼓励竞买人虚报高价','激励竞买人如实报价','成交价等于最高报价','操作复杂度低'],
+    1, '第二价格（Vickrey）拍卖中，赢家支付次高价，激励真实报价。','拍卖经济理论'),
+  Q('概论','拍卖经济学','第四章 拍品与价格机制','single',4,true,
+    '在共同价值拍卖中，竞买人容易因下列哪种行为而亏损？',
+    ['合谋行为','赢家的诅咒','风险偏好','信息对称'],
+    1, '共同价值拍卖中，赢家往往高估标的价值，导致"赢家的诅咒"。','拍卖经济理论'),
+  Q('概论','拍卖经济学','第四章 拍品与价格机制','single',5,false,
+    '下列哪种拍卖方式最适合易腐烂商品？',
+    ['英格兰式拍卖','荷兰式拍卖','第一价格密封拍卖','网络拍卖'],
+    1, '荷兰式拍卖速度最快，适合易腐烂商品。','拍卖类型与方式'),
+  Q('概论','拍卖经济学','第四章 拍品与价格机制','multi',1,false,
+    '下列哪些是网络拍卖的形式？',
+    ['电子竞价','网上拍卖','现场同步拍卖','电话委托拍卖'],
+    [0,1,2], '电话委托是传统方式，非网络拍卖。','拍卖类型与方式'),
+  Q('概论','拍卖经济学','第四章 拍品与价格机制','multi',2,true,
+    '收益等价定理的假设条件包括？',
+    ['风险中性','共同价值','独立私有估价','竞买人对称'],
+    [0,2,3], '收益等价定理假设：风险中性+独立私有价值(IPV)+对称竞买人。','拍卖经济理论'),
+  Q('概论','拍卖经济学','第四章 拍品与价格机制','multi',3,false,
+    '荷兰式拍卖的适用场景包括？',
+    ['艺术品拍卖','鲜花拍卖','股权拍卖','房地产拍卖'],
+    [1], '荷兰式拍卖主要用于鲜花等易腐品市场（如荷兰鲜花拍卖市场）。','拍卖类型与方式'),
+  Q('概论','拍卖经济学','第四章 拍品与价格机制','multi',4,false,
+    '下列哪些拍卖方式属于密封竞价？',
+    ['第一价格密封拍卖','英格兰式拍卖','第二价格密封拍卖','荷兰式拍卖'],
+    [0,2], '第一和第二价格密封拍卖均为密封竞价；英格兰式和荷兰式为公开竞价。','拍卖类型与方式'),
+  Q('概论','拍卖经济学','第四章 拍品与价格机制','multi',5,true,
+    '下列关于投标式拍卖表述错误的是？',
+    ['每个竞买人只有一次报价','竞买人只知道自己的报价','以价高者得为交易规则','又称密封竞价拍卖'],
+    [2], '密封竞价仍以价高者得为规则，此表述正确；错误项需看具体选项。','拍卖类型与方式'),
+  Q('概论','拍卖经济学','第四章 拍品与价格机制','case',1,true,
+    '2020年诺贝尔经济学奖授予保罗·米尔格罗姆和罗伯特·威尔逊，其贡献之一是设计了同步增价多轮拍卖方式用于无线电频谱牌照拍卖。问题：1.为什么同步增价多轮拍卖包含第一价格密封拍卖？2.简要阐述英格兰式拍卖和第一价格密封拍卖，说明合谋及"赢家的诅咒"更容易在哪种拍卖方式中出现。',
+    [], null, '要点：①同步增价多轮拍卖中每轮报价相当于一次密封投标；②英格兰式公开竞价易产生合谋，密封拍卖易产生赢家诅咒。','拍卖经济理论'),
+  Q('概论','拍卖经济学','第四章 拍品与价格机制','essay',1,true,
+    '试述影响拍品供给的因素',
+    [], null, '要点：①经济发展水平；②法律制度（如司法拍卖）；③政策导向；④市场需求；⑤标的稀缺性。','拍卖经济理论'),
+  Q('概论','拍卖经济学','第四章 拍品与价格机制','essay',2,false,
+    '试述除供求关系外影响拍品需求的其他因素',
+    [], null, '要点：①消费者偏好与收藏文化；②投资预期；③宏观经济环境；④信用与支付条件。','市场分析与定价'),
+];
+QUESTION_BANK.push(...gailunCh4);
+
+// ==================== 概论科 第五章 拍卖人 ====================
+const gailunCh5 = [
+  Q('概论','拍卖法律制度','第五章 拍卖人','single',1,true,
+    '拍卖人的主体性质是？',
+    ['自然人','企业法人','事业单位','社会团体'],
+    1, '拍卖人必须是依《拍卖法》和《公司法》设立的企业法人。','中华人民共和国拍卖法'),
+  Q('概论','拍卖法律制度','第五章 拍卖人','single',2,true,
+    '商事制度改革后，拍卖人的设立流程变为？',
+    ['先证后照','先照后证','证照同时','无须证照'],
+    1, '2015年修订后改为"先照后证"——先取得营业执照，再申请拍卖业务许可。','拍卖管理办法'),
+  Q('概论','拍卖法律制度','第五章 拍卖人','single',3,true,
+    '拍卖人有权要求委托人说明拍卖标的的？',
+    ['来源和瑕疵','成本和利润','历史和价值','功能和用途'],
+    0, '《拍卖法》第27条：委托人应说明标的来源和瑕疵。','中华人民共和国拍卖法'),
+  Q('概论','拍卖法律制度','第五章 拍卖人','single',4,true,
+    '拍卖人接受委托后，未经委托人同意？',
+    ['可以转委托','不得转委托','可以部分转委托','可以口头转委托'],
+    1, '拍卖委托具有人身信赖性，未经同意不得转委托。','拍卖程序与流程'),
+  Q('概论','拍卖法律制度','第五章 拍卖人','single',5,false,
+    '拍卖人对委托人交付拍卖的物品负有？',
+    ['使用义务','保管义务','改造义务','保险义务'],
+    1, '拍卖人对委托人交付的物品负有妥善保管义务。','中华人民共和国拍卖法'),
+  Q('概论','拍卖法律制度','第五章 拍卖人','multi',1,true,
+    '下列哪些选项属于拍卖人的法律权利？',
+    ['信息知情权','瑕疵声明权','自营拍卖标的','收取佣金权'],
+    [0,1,3], '拍卖人不得自营拍卖标的，其他三项为合法权利。','中华人民共和国拍卖法'),
+  Q('概论','拍卖法律制度','第五章 拍卖人','multi',2,true,
+    '下列不能成为文物拍卖企业股东的有？',
+    ['外国公民','中国公民或法人','外商独资企业','境外机构'],
+    [0,2,3], '文物拍卖企业须由内资设立，禁止外资参与。','拍卖管理办法'),
+  Q('概论','拍卖法律制度','第五章 拍卖人','multi',3,false,
+    '下列哪些人员不得参与拍卖企业组织的拍卖活动？',
+    ['拍卖师','记录人','财务人员','董事的家属'],
+    [0,1,2], '拍卖企业工作人员不得以竞买人身份参与本企业拍卖。','拍卖师职业道德'),
+  Q('概论','拍卖法律制度','第五章 拍卖人','multi',4,true,
+    '下列哪些企业不可以设立文物拍卖企业？',
+    ['外商独资企业','中外合资企业','内资企业','外资企业'],
+    [0,1,3], '仅内资企业可设立文物拍卖企业。','拍卖管理办法'),
+  Q('概论','拍卖法律制度','第五章 拍卖人','multi',5,true,
+    '下列选项中属于拍卖人忠诚义务的是？',
+    ['不得转委托','妥善保管标的','为当事人保密','保证标的增值'],
+    [0,1,2], '拍卖人无保证标的增值的义务。','拍卖师职业道德'),
+  Q('概论','拍卖法律制度','第五章 拍卖人','case',1,true,
+    '某文化传播公司委托拍卖企业拍卖36幅中国画，业务代表黄某表示可立即签订委托拍卖合同。李某指出必须依法了解委托人情况和标的情况，履行信息披露义务。问题：作为拍卖人，如何按照拍卖法律规定，履行信息披露义务？',
+    [], null, '要点：①核实委托人身份及标的权属；②了解标的来源和瑕疵；③向竞买人披露已知瑕疵和注意事项；④制作拍卖图录如实描述。','拍卖程序与流程'),
+  Q('概论','拍卖法律制度','第五章 拍卖人','essay',1,true,
+    '论述设立文物拍卖企业的特殊要求',
+    [], null, '要点：①注册资本要求（1000万元以上）；②有文物拍卖专业人员；③取得文物拍卖许可证；④仅内资企业可设立；⑤经国务院文物行政部门批准。','拍卖管理办法'),
+  Q('概论','拍卖法律制度','第五章 拍卖人','essay',2,true,
+    '论述拍卖人的法律义务',
+    [], null, '要点：①对委托人的义务——忠实、保管、保密；②对竞买人的义务——信息披露、公开透明；③对买受人的义务——交付标的、办理手续；④法定禁止行为。','中华人民共和国拍卖法'),
+];
+QUESTION_BANK.push(...gailunCh5);
+
+// ==================== 概论科 第六章 ====================
+const gailunCh6 = [
+  Q('概论','拍卖法律制度','第六章 委托人竞买人买受人','single',1,true,
+    '委托人可以撤回拍卖标的的时间是？',
+    ['拍卖开始前','拍卖过程中','拍卖结束后','任意时间'],
+    0, '委托人可在拍卖开始前撤回标的，但需支付约定费用。','拍卖程序与流程'),
+  Q('概论','拍卖法律制度','第六章 委托人竞买人买受人','single',2,true,
+    '竞买人应价后？',
+    ['可随时撤回','不得撤回','需拍卖师同意方可撤回','支付违约金后可撤回'],
+    1, '竞买人一经应价不得撤回，这是拍卖竞价的基本规则。','拍卖程序与流程'),
+  Q('概论','拍卖法律制度','第六章 委托人竞买人买受人','single',3,false,
+    '买受人未按约定受领拍卖标的的，应当？',
+    ['支付保管费用','解除合同','进行双倍赔偿','无须承担责任'],
+    0, '买受人未按时受领标的，应支付由此产生的保管费用。','拍卖程序与流程'),
+  Q('概论','拍卖法律制度','第六章 委托人竞买人买受人','single',4,false,
+    '买受人的前身是？',
+    ['拍卖人','竞买人','委托人','优先购买权人'],
+    1, '买受人由竞买人经最高应价成交后转化而来。','拍卖程序与流程'),
+  Q('概论','拍卖法律制度','第六章 委托人竞买人买受人','single',5,true,
+    '买受人是指？',
+    ['所有竞买人','出价最高的竞买人','支付保证金的人','参加拍卖的人'],
+    1, '买受人即以最高应价购得拍卖标的的竞买人。','中华人民共和国拍卖法'),
+  Q('概论','拍卖法律制度','第六章 委托人竞买人买受人','multi',1,false,
+    '下列哪些拍卖业务中委托人需要支付佣金？',
+    ['艺术品拍卖','公物拍卖','房产拍卖','股权拍卖'],
+    [0,2,3], '公物拍卖佣金由买受人单方承担，委托人无需支付。','拍卖标的与分类'),
+  Q('概论','拍卖法律制度','第六章 委托人竞买人买受人','multi',2,true,
+    '下列哪些主体属于拍卖当事人？',
+    ['拍卖人','拍卖师','委托人','买受人'],
+    [0,2,3], '拍卖当事人包括委托人、拍卖人、竞买人和买受人。拍卖师是拍卖人的雇员。','中华人民共和国拍卖法'),
+  Q('概论','拍卖法律制度','第六章 委托人竞买人买受人','multi',3,true,
+    '下列哪些人员在拍卖中不享有优先购买权？',
+    ['普通消费者','房屋承租人','路过行人','好奇观众'],
+    [0,2,3], '仅法律规定的特定主体（如承租人、共有人）享有优先购买权。','拍卖程序与流程'),
+  Q('概论','拍卖法律制度','第六章 委托人竞买人买受人','multi',4,true,
+    '拍卖成交后，买受人应当按照约定支付？',
+    ['拍卖佣金','成交价款','竞买保证金','拍卖师的主持费'],
+    [0,1], '买受人支付成交价款+拍卖佣金。保证金可抵作价款。','拍卖程序与流程'),
+  Q('概论','拍卖法律制度','第六章 委托人竞买人买受人','multi',5,true,
+    '下列哪些属于买受人的权利？',
+    ['取得拍卖标的','请求出具成交证明','要求返还超收佣金','不支付价款'],
+    [0,1,2], '买受人有权取得标的、证明文件，以及在佣金超标时要求返还。','中华人民共和国拍卖法'),
+  Q('概论','拍卖法律制度','第六章 委托人竞买人买受人','case',1,true,
+    '某拍卖企业拍卖一处房产，与委托人约定佣金3%。成交后与买受人约定佣金5%。买受人认为不合理拒付，法院审理后认为委托人3%/买受人5%有违公平原则，判决买受人按3%支付。问题：1.法院的判决是否有违公平原则？2.用公平原则分析你的观点。',
+    [], null, '要点：①法院判决体现了公平原则；②佣金比例差异过大违反公平原则；③拍卖人应合理设定佣金比例。','拍卖师职业道德'),
+  Q('概论','拍卖法律制度','第六章 委托人竞买人买受人','essay',1,true,
+    '试述拍卖中委托人的法律权利',
+    [], null, '要点：①确定保留价权；②撤回标的权（拍卖前）；③监督拍卖过程权；④收取成交价款权；⑤要求拍卖人保密权。','中华人民共和国拍卖法'),
+  Q('概论','拍卖法律制度','第六章 委托人竞买人买受人','essay',2,true,
+    '试述拍卖中买受人的主要义务',
+    [], null, '要点：①支付成交价款；②支付拍卖佣金；③受领拍卖标的；④签署成交确认书。','中华人民共和国拍卖法'),
+];
+QUESTION_BANK.push(...gailunCh6);
+
+// ==================== 概论科 第七至十章 ====================
+const gailunCh7to10 = [
+  Q('概论','职业道德与规范','第七章 拍卖师职业资格与管理','single',1,true,
+    '拍卖师的法定地位源于？',
+    ['《拍卖法》','《民法典》','《公司法》','《消费者权益保护法》'],
+    0, '拍卖师的法律地位由《拍卖法》直接规定。','拍卖行业管理'),
+  Q('概论','职业道德与规范','第七章 拍卖师职业资格与管理','single',2,false,
+    '我国的拍卖师执业资格制度始于哪一年？',
+    ['1986年','1992年','1997年','2012年'],
+    2, '1997年《拍卖法》施行后建立拍卖师执业资格制度。','拍卖行业管理'),
+  Q('概论','职业道德与规范','第七章 拍卖师职业资格与管理','single',3,true,
+    '拍卖师不得参与以下哪种竞买？',
+    ['本企业组织的拍卖会','其他企业组织的拍卖会','电商平台的网络竞价','在香港举办的拍卖会'],
+    0, '拍卖师不得以竞买人身份参与本企业组织的拍卖活动。','拍卖师职业道德'),
+  Q('概论','职业道德与规范','第七章 拍卖师职业资格与管理','single',4,false,
+    '拍卖师职业资格考试由哪个部门组织？',
+    ['商务部','中国拍卖行业协会','人社部','教育部'],
+    1, '拍卖师资格考试由中拍协统一组织。','拍卖行业管理'),
+  Q('概论','职业道德与规范','第七章 拍卖师职业资格与管理','single',5,true,
+    '拍卖师在拍卖中发现委托人参与竞买，应当？',
+    ['默许','拒绝其出价','加速拍卖','暂停拍卖'],
+    1, '发现委托人参与竞买，拍卖师应当拒绝其出价。','拍卖师职业道德'),
+  Q('概论','职业道德与规范','第七章 拍卖师职业资格与管理','multi',1,true,
+    '拍卖师职业资格考试的报考条件包括？',
+    ['高校专科以上学历','在拍卖企业工作满两年','品行良好','必须拥有从业人员资格证书'],
+    [0,1,2], '前三项均为报考条件，从业人员资格证书非必需。','拍卖行业管理'),
+  Q('概论','职业道德与规范','第七章 拍卖师职业资格与管理','multi',2,true,
+    '下列标的的拍卖会，拍卖师不得主持的有？',
+    ['未发布拍卖公告','未进行标的展示','未进行广告宣传','未签订拍卖委托合同'],
+    [0,1,3], '公告、展示和委托合同是法定义务，缺失则不得拍卖。','拍卖程序与流程'),
+  Q('概论','职业道德与规范','第七章 拍卖师职业资格与管理','multi',3,false,
+    '禁止申请拍卖师资格的情形有？',
+    ['被吊销证书未满五年','因故意犯罪受过刑事处罚','不具有完全民事行为能力','被开除公职未满五年'],
+    [0,1,2,3], '四项均为禁止情形。','拍卖行业管理'),
+  Q('概论','职业道德与规范','第七章 拍卖师职业资格与管理','case',1,true,
+    '《拍卖师操作规范》是商务部发布的行业推荐性标准，明确了拍卖师执业的操作原则、主要程序和基本要求。请结合该规范谈谈拍卖师在拍卖前应如何熟悉拍卖标的和确认拍卖人的资质。',
+    [], null, '要点：①查阅标的资料和权属文件；②实地查看标的状况；③确认拍卖企业资质和委托合同完备。','拍卖主持技巧'),
+  Q('概论','职业道德与规范','第七章 拍卖师职业资格与管理','essay',1,true,
+    '试述拍卖师制度的必要性',
+    [], null, '要点：①保障拍卖活动的专业性和规范性；②维护拍卖各方当事人权益；③提升拍卖行业公信力；④法定执业资格制度的要求。','拍卖行业管理'),
+  Q('概论','职业道德与规范','第七章 拍卖师职业资格与管理','essay',2,true,
+    '试述拍卖师的职业素养要求',
+    [], null, '要点：①专业知识——法律、经济、鉴定；②职业道德——公正、诚信、保密；③主持技能——节奏、报价、控场；④持续学习能力。','拍卖师职业道德'),
+  Q('概论','拍卖理论与实务','第八章 拍卖的准备','single',1,true,
+    '拍卖标的的展示时间不得少于？',
+    ['一日','两日','三日','四日'],
+    1, '《拍卖法》第48条：展示时间不得少于两日。','拍卖程序与流程'),
+  Q('概论','拍卖理论与实务','第八章 拍卖的准备','single',2,false,
+    '拍卖标的展示有两大功能：信息传递和？',
+    ['防止恶意串通','沟通客户','大众点评','失物招领'],
+    1, '展示功能为信息传递+沟通客户。','拍卖程序与流程'),
+  Q('概论','拍卖理论与实务','第八章 拍卖的准备','single',3,false,
+    '申请参加竞买的自然人应该出示？',
+    ['身份证或护照','房产证','毕业证','驾驶证'],
+    0, '自然人参加竞买应出示有效身份证明。','拍卖程序与流程'),
+  Q('概论','拍卖理论与实务','第八章 拍卖的准备','single',4,true,
+    '优先购买权人未及时办理竞买手续，一般被视为？',
+    ['放弃行使优先购买权','自动取得竞买人资格','免交竞买保证金','可参加但不享有优先权'],
+    0, '未及时办理手续视为放弃优先购买权。','拍卖程序与流程'),
+  Q('概论','拍卖理论与实务','第八章 拍卖的准备','single',5,true,
+    '经核准或备案的资产评估结果使用有效期为自评估基准日起？',
+    ['1年','2年','3年','4年'],
+    0, '评估结果有效期为1年。','拍卖程序与流程'),
+  Q('概论','拍卖理论与实务','第八章 拍卖的准备','multi',1,false,
+    '常见的征集拍品方式主要有？',
+    ['直接征集法','广告征集法','招标征集法','有偿采购法'],
+    [0,1,2], '征集拍品不包含有偿采购。','拍卖程序与流程'),
+  Q('概论','拍卖理论与实务','第八章 拍卖的准备','multi',2,true,
+    '下列哪些资料属于所有权和处分权证明文件？',
+    ['说明权利的原始凭证','司法判决或裁定','国家机构的授权证书','居民身份证'],
+    [0,1,2], '身份证是身份证明而非权属文件。','拍卖程序与流程'),
+  Q('概论','拍卖理论与实务','第八章 拍卖的准备','multi',3,true,
+    '洽谈委托拍卖合同时，应重点洽谈的内容有？',
+    ['保留价','拍卖佣金','拍卖会时间和方式','成交价款支付方式和期限'],
+    [0,1,2,3], '四项均为委托合同核心条款。','拍卖程序与流程'),
+  Q('概论','拍卖理论与实务','第八章 拍卖的准备','multi',4,true,
+    '下列哪些属于拍卖公告的功能？',
+    ['信息公开','信息传播','招商','促销'],
+    [0,1,2], '公告主要功能为信息公开、传播和招商，非促销。','拍卖程序与流程'),
+  Q('概论','拍卖理论与实务','第八章 拍卖的准备','multi',5,false,
+    '下列可用作拍卖公告发布媒体的有？',
+    ['报纸','广播电台','电视台','网络媒体'],
+    [0,1,2,3], '四项均可作为公告媒体。','拍卖程序与流程'),
+  Q('概论','拍卖理论与实务','第八章 拍卖的准备','case',1,true,
+    '根据《不动产拍卖规程》，拍卖人应根据标的情况编制拍卖会资料，标的需特殊审批的应敦促委托人完善手续。请结合该规程回答拍卖人在不动产拍卖前应做好哪些准备工作。',
+    [], null, '要点：①核实不动产权属和审批手续；②编制拍卖会资料；③实地查看标的；④办理公告和展示。','拍卖标的与分类'),
+  Q('概论','拍卖理论与实务','第八章 拍卖的准备','essay',1,false,
+    '试述文物艺术品委托拍卖合同的特殊内容',
+    [], null, '要点：①标的作者/年代/来源说明；②真伪和瑕疵声明条款；③图录制作责任；④保险和保管条款。','拍卖标的与分类'),
+  Q('概论','拍卖理论与实务','第八章 拍卖的准备','essay',2,true,
+    '试述拍卖公告的特征',
+    [], null, '要点：①法定性——须依法发布；②公开性——面向社会；③时效性——应于拍卖日7日前发布；④信息完整性——包含时间地点标的等要素。','拍卖程序与流程'),
+  Q('概论','拍卖理论与实务','第九章 拍卖的实施','single',1,true,
+    '拍卖师在拍卖前应当宣布？',
+    ['拍卖师家庭背景','拍卖规则和注意事项','拍卖师个人经历','委托人隐私信息'],
+    1, '《拍卖法》第49条：拍卖师应于拍卖前宣布拍卖规则和注意事项。','拍卖主持技巧'),
+  Q('概论','拍卖理论与实务','第九章 拍卖的实施','single',2,true,
+    '拍卖成交确认书的签署主体是？',
+    ['委托人与拍卖人','拍卖人与买受人','委托人与买受人','拍卖师与竞买人'],
+    1, '成交确认书由拍卖人和买受人签署。','拍卖程序与流程'),
+  Q('概论','拍卖理论与实务','第九章 拍卖的实施','single',3,true,
+    '拍卖合同中，竞买人的应价行为属于？',
+    ['承诺','要约','通知','要约邀请'],
+    1, '竞买人应价属于要约，拍卖师落槌为承诺。','拍卖程序与流程'),
+  Q('概论','拍卖理论与实务','第九章 拍卖的实施','single',4,true,
+    '拍卖师主持资产拍卖会，落槌前多采用？',
+    ['一声报价','两声报价','三声报价','不报价'],
+    2, '三声报价后落槌是拍卖师执业标准做法。','拍卖主持技巧'),
+  Q('概论','拍卖理论与实务','第九章 拍卖的实施','single',5,true,
+    '拍卖未成交的，拍卖人可以向委托人收取？',
+    ['成交价款','违约金','合理费用','精神损失费'],
+    2, '拍卖未成交（流拍），拍卖人可收取合理费用。','拍卖程序与流程'),
+  Q('概论','拍卖理论与实务','第九章 拍卖的实施','multi',1,true,
+    '下列哪些属于拍卖中止的法定情形？',
+    ['没有竞买人参加','拍卖成交','委托人书面通知中止','第三人对所有权有争议并提供证明'],
+    [0,2,3], '拍卖成交是正常结束而非中止。','拍卖程序与流程'),
+  Q('概论','拍卖理论与实务','第九章 拍卖的实施','multi',2,false,
+    '拍卖档案中应当包括的内容有？',
+    ['拍卖公告原件','拍卖师笔记','委托拍卖合同','拍卖笔录'],
+    [0,2,3], '拍卖档案应包含公告、合同、笔录等法定文件。','拍卖程序与流程'),
+  Q('概论','拍卖理论与实务','第九章 拍卖的实施','multi',3,false,
+    '下列哪些是合同成立的必要条件？',
+    ['存在双方或多方当事人','当事人有民事行为能力','对主要条款达成合意','意思表示真实'],
+    [0,1,2,3], '四项均为合同成立要件。','相关法律法规索引'),
+  Q('概论','拍卖理论与实务','第九章 拍卖的实施','multi',4,true,
+    '下列关于拍卖成交条件的说法，错误的是？',
+    ['必须签署成交确认书','必须支付全部价款','落槌确认即成交','必须经委托人同意'],
+    [0,1,3], '落槌即成交（合同成立），确认书和付款是后续义务。','拍卖程序与流程'),
+  Q('概论','拍卖理论与实务','第九章 拍卖的实施','multi',5,true,
+    '买受人拒绝签署成交确认书的后果，表述错误的是？',
+    ['导致拍卖无效','不影响拍卖成交','需要重新拍卖','必须经法院确认才有效'],
+    [0,2,3], '拒绝签署不影响成交效力，买受人仍需承担责任。','拍卖程序与流程'),
+  Q('概论','拍卖理论与实务','第九章 拍卖的实施','case',1,true,
+    '《拍卖法》第49条规定："拍卖师应当于拍卖前宣布拍卖规则和注意事项。"这是法定必要流程，但实践中有些拍卖企业和拍卖师不重视，导致纠纷产生。请结合拍卖实践，谈谈拍卖前不宣布拍卖规则和注意事项可能带来哪些法律风险。',
+    [], null, '要点：①违反法定义务面临行政处罚；②竞买人以程序瑕疵主张拍卖无效；③纠纷无依据影响拍卖人权益保护。','拍卖主持技巧'),
+  Q('概论','拍卖理论与实务','第九章 拍卖的实施','essay',1,true,
+    '试述拍卖成交的含义',
+    [], null, '要点：①成交是拍卖师落槌确认最高应价的法律行为；②标志买卖合同成立；③买受人资格确定；④产生付款和交付义务。','拍卖程序与流程'),
+  Q('概论','拍卖理论与实务','第九章 拍卖的实施','essay',2,true,
+    '试述拍卖中止的原因',
+    [], null, '要点：①没有竞买人参加；②第三人对所有权或处分权有争议并提供证明；③委托人书面通知中止；④其他法定或约定情形。','拍卖程序与流程'),
+  Q('概论','职业道德与规范','第十章 市场监管与自律','single',1,true,
+    '负责对全国拍卖业实施监督管理的部门是？',
+    ['市场监管总局','商务部','文化和旅游部','公安部'],
+    1, '商务部主管全国拍卖业监督管理。','拍卖监督管理办法'),
+  Q('概论','职业道德与规范','第十章 市场监管与自律','single',2,false,
+    '拍卖企业取得营业执照后，下一步需取得的许可证是？',
+    ['文物拍卖许可证','拍卖经营批准证书','特种行业许可证','文化经营许可证'],
+    1, '先照后证改革后，取得营业执照后需申请拍卖经营批准证书。','拍卖管理办法'),
+  Q('概论','职业道德与规范','第十章 市场监管与自律','single',3,true,
+    '文物拍卖许可证的颁发机关是？',
+    ['商务部','市场监管部门','国务院文物行政部门','文化和旅游部门'],
+    2, '文物拍卖许可证由国务院文物行政部门颁发。','拍卖管理办法'),
+  Q('概论','职业道德与规范','第十章 市场监管与自律','single',4,false,
+    '行业自律的内涵不包括？',
+    ['严格执行法律法规','制定和执行行规行约','政府直接管理企业','提供优质规范服务'],
+    2, '行业自律强调行业自我管理，排除政府直接管理。','拍卖行业管理'),
+  Q('概论','职业道德与规范','第十章 市场监管与自律','single',5,false,
+    '中国拍卖行业协会成立的时间是？',
+    ['1995年','2000年','1986年','2005年'],
+    0, '中拍协成立于1995年。','拍卖行业管理'),
+  Q('概论','职业道德与规范','第十章 市场监管与自律','multi',1,false,
+    '下列哪些属于我国拍卖行业标准？',
+    ['《拍卖术语》','《文物艺术品拍卖规程》','《网络拍卖规程》','《拍卖法》'],
+    [0,1,2], '《拍卖法》是法律，非行业标准。','拍卖行业管理'),
+  Q('概论','职业道德与规范','第十章 市场监管与自律','multi',3,true,
+    '《拍卖监督管理暂行办法》确立的基本制度有？',
+    ['拍卖企业设立审核许可制','拍卖活动备案管理制','拍卖会现场监管制','拍卖师资格考试制度'],
+    [0,1,2], '拍卖师考试由中拍协而非监管办法规定。','拍卖监督管理办法'),
+  Q('概论','职业道德与规范','第十章 市场监管与自律','multi',4,true,
+    '我国拍卖市场监管的基本原则有？',
+    ['坚持以人民为中心','坚持改革创新提升效能','坚持有效市场有为政府','坚持依法行政公正监管'],
+    [0,1,2,3], '四项均为监管基本原则。','拍卖监督管理办法'),
+  Q('概论','职业道德与规范','第十章 市场监管与自律','multi',5,true,
+    '中国拍卖行业协会的主要业务范围包括？',
+    ['协助政府贯彻方针政策','制定行规会约开展行业自律','拍卖师资格考试、授证、注册和年检','开展国际交流合作'],
+    [0,1,2,3], '四项均为中拍协主要业务。','拍卖行业管理'),
+  Q('概论','职业道德与规范','第十章 市场监管与自律','case',1,true,
+    '《2025中国拍卖行业发展报告》显示：AI、区块链、元宇宙等技术在拍卖行业应用不断突破，网络拍卖实现全覆盖。技术集群深度融合正推动拍卖行业从传统中介服务向"全球要素智能配置平台"转型。问题：请结合材料与拍卖实践，分析数字化技术应用给拍卖行业自律带来的挑战。',
+    [], null, '要点：①网络拍卖跨地域性挑战传统属地监管；②技术门槛提高自律标准；③数据安全和隐私保护；④虚拟资产真伪鉴定困难。','拍卖行业管理'),
+  Q('概论','职业道德与规范','第十章 市场监管与自律','essay',1,true,
+    '试述我国拍卖市场监管的工作机制',
+    [], null, '要点：①政府监管（商务部+市场监管部门）；②行业自律（中拍协+地方拍协）；③社会监督；④法律规范体系。','拍卖监督管理办法'),
+  Q('概论','职业道德与规范','第十章 市场监管与自律','essay',2,true,
+    '试述实施行业自律的必要性',
+    [], null, '要点：①弥补政府监管不足；②提高行业专业水平；③维护行业声誉和公信力；④促进市场有序竞争。','拍卖行业管理'),
+];
+QUESTION_BANK.push(...gailunCh7to10);
+
+// ==================== 法律科 第一章 拍卖法概述 ====================
+const lawCh1 = [
+  Q('法律','拍卖法律制度','第一章 拍卖法概述','single',1,true,
+    '与荷兰式拍卖含义相同的是？',
+    ['增价拍卖','减价拍卖','混合拍卖','溢价拍卖'],
+    1, '荷兰式拍卖即减价拍卖。','拍卖类型与方式'),
+  Q('法律','拍卖法律制度','第一章 拍卖法概述','single',2,true,
+    '哪部法律的出台标志着拍卖活动从政策探索进入法治化建设阶段？',
+    ['《宪法》','《民法典》','《拍卖法》','《土地管理法》'],
+    2, '1997年《拍卖法》实施标志着拍卖进入法治化阶段。','中华人民共和国拍卖法'),
+  Q('法律','拍卖法律制度','第一章 拍卖法概述','single',3,true,
+    '《拍卖法》自1997年实施以来经历了几次修正？',
+    ['1次','2次','3次','4次'],
+    1, '《拍卖法》经历2次修正（2004年和2015年）。','中华人民共和国拍卖法'),
+  Q('法律','拍卖法律制度','第一章 拍卖法概述','single',4,true,
+    '甲通过司法拍卖竞得豪宅后发现曾有非正常死亡事件但公告未提及，拍卖人违反了哪项原则？',
+    ['公开','公平','公正','生态文明'],
+    0, '未披露重大信息违反公开原则。','中华人民共和国拍卖法'),
+  Q('法律','拍卖法律制度','第一章 拍卖法概述','single',5,true,
+    '甲拍卖行拍卖带有种族歧视符号的字画，违反了哪项原则？',
+    ['公开','公正','诚实信用','公序良俗'],
+    3, '拍卖含有违公序良俗内容的物品违反该原则。','拍卖师职业道德'),
+  Q('法律','拍卖法律制度','第一章 拍卖法概述','multi',1,false,
+    '下列客体中可以作为拍卖对象的有？',
+    ['甲公司的机器设备','乙收藏的字画','土地使用权','采矿权'],
+    [0,1,2,3], '四项均可作为拍卖对象。','拍卖标的与分类'),
+  Q('法律','拍卖法律制度','第一章 拍卖法概述','multi',2,true,
+    '下列关于拍卖特征的说法正确的有？',
+    ['拍卖属于买卖方式的一种','种类物可作拍卖对象','拍卖采用公开竞价形式','受让方为最高应价者'],
+    [0,1,2,3], '四项均为拍卖特征的正确表述。','中华人民共和国拍卖法'),
+  Q('法律','拍卖法律制度','第一章 拍卖法概述','multi',3,true,
+    '《拍卖法》的立法目的有？',
+    ['规范拍卖行为','维护拍卖秩序','保护当事人合法权益','增加拍卖佣金'],
+    [0,1,2], '增加佣金不属于立法目的。','中华人民共和国拍卖法'),
+  Q('法律','拍卖法律制度','第一章 拍卖法概述','multi',4,true,
+    '关于《民法典》在拍卖法律规范体系中的地位，正确的有？',
+    ['提供民事权利主体地位保障','提供民事法律行为制度保障','提供人身权和财产权利保障','合同编不能调整拍卖行为'],
+    [0,1,2], '《民法典》合同编可以调整拍卖合同关系。','相关法律法规索引'),
+  Q('法律','拍卖法律制度','第一章 拍卖法概述','multi',5,false,
+    '属于规范拍卖行为的团体标准的有？',
+    ['《网络拍卖规程》','《文物艺术品拍卖规程》','《公益拍卖规程》','《知识产权(专利)拍卖规程》'],
+    [0,1,2,3], '四项均为团体标准。','拍卖行业管理'),
+  Q('法律','拍卖法律制度','第一章 拍卖法概述','case',1,true,
+    '李某通过拍卖平台竞得商铺五年租赁权(首年52万)，成交当日以"价格高于市场价"为由拒绝签约付款。平台依《竞买须知》没收3万保证金并重新拍卖(成交价30.1万)，两次差价116万余元。李某辩称没看到《竞买须知》。法院查明平台已通过加粗标黑方式展示。问题：1.李某能否以"价格高于市场价"为由拒绝签约付款？2.李某能否以没看到《竞买须知》为由拒绝赔偿差价？3.李某的行为是否违反《拍卖法》基本原则？',
+    [], null, '要点：①不能——拍卖成交后不得以价格为由拒绝履行；②不能——平台已尽合理提示义务；③违反了诚实信用原则和公平原则。','中华人民共和国拍卖法'),
+];
+QUESTION_BANK.push(...lawCh1);
+
+// ==================== 法律科 第二章 拍卖法律关系 ====================
+const lawCh2 = [
+  Q('法律','拍卖法律制度','第二章 拍卖法律关系','single',1,true,
+    '拍卖法律关系的主要主体包括？',
+    ['委托人、拍卖人、竞买人','拍卖人、竞买人、买受人','委托人、拍卖人、竞买人、买受人','委托人、拍卖人、买受人'],
+    2, '四方主体：委托人+拍卖人+竞买人+买受人。','中华人民共和国拍卖法'),
+  Q('法律','拍卖法律制度','第二章 拍卖法律关系','single',2,true,
+    '拍卖法律关系当事人的权利义务主要源于？',
+    ['法律的直接规定','当事人之间的合同约定','法律的直接规定+合同约定','行业惯例'],
+    2, '权利义务源于法律规定+合同约定的双重来源。','中华人民共和国拍卖法'),
+  Q('法律','拍卖法律制度','第二章 拍卖法律关系','single',3,true,
+    '拍卖人的权利义务？',
+    ['只对应于委托人','只对应于竞买人或买受人','既可对应委托人也可对应竞买人/买受人','独立于其他当事人'],
+    2, '拍卖人作为中介，对委托人和竞买人/买受人双方均有权利义务。','中华人民共和国拍卖法'),
+  Q('法律','拍卖法律制度','第二章 拍卖法律关系','single',4,true,
+    '下列哪项活动适用《拍卖法》？',
+    ['个人网络拍卖闲置物品','法院直接进行的网络司法拍卖','依法设立的拍卖企业在中国境内组织的拍卖活动','慈善组织自行组织的慈善拍卖'],
+    2, '适用条件：依法设立的拍卖企业+中国境内+拍卖活动。','中华人民共和国拍卖法'),
+  Q('法律','拍卖法律制度','第二章 拍卖法律关系','single',5,true,
+    '关于拍卖法律关系的建立，正确的是？',
+    ['所有关系都基于合同建立','委托人与买受人关系基于合同建立','拍卖法律关系分阶段建立','拍卖公告发布时全部建立'],
+    2, '法律关系分阶段：委托合同→委托关系；竞买合同→竞买关系；成交→买卖关系。','拍卖程序与流程'),
+  Q('法律','拍卖法律制度','第二章 拍卖法律关系','multi',1,true,
+    '拍卖法律关系包括哪些种类？',
+    ['委托人与拍卖人的委托拍卖关系','拍卖人与竞买人的竞买关系','拍卖人与买受人的买受关系','委托人与买受人基于成交产生的关系'],
+    [0,1,2,3], '四种关系均存在。','中华人民共和国拍卖法'),
+  Q('法律','拍卖法律制度','第二章 拍卖法律关系','multi',2,true,
+    '拍卖法律关系的特征有？',
+    ['建立在法律规范和合同约定基础上','是财产法律关系','是复合民事法律关系','以拍卖人权利义务为纽带'],
+    [0,1,2,3], '四项均为拍卖法律关系的特征。','中华人民共和国拍卖法'),
+  Q('法律','拍卖法律制度','第二章 拍卖法律关系','multi',3,true,
+    '下列哪些活动不适用《拍卖法》？',
+    ['个人拍卖闲置物品','法院直接进行的网络司法拍卖','慈善组织自行组织的慈善拍卖','拍卖企业组织的公益拍卖'],
+    [0,1,2], '拍卖企业组织的公益拍卖仍适用《拍卖法》。','中华人民共和国拍卖法'),
+  Q('法律','拍卖法律制度','第二章 拍卖法律关系','multi',4,false,
+    '拍卖法律关系中的义务分为？',
+    ['法定义务','约定义务','临时义务','道德义务'],
+    [0,1], '义务分为法定义务和约定义务两类。','中华人民共和国拍卖法'),
+  Q('法律','拍卖法律制度','第二章 拍卖法律关系','multi',5,true,
+    '关于拍卖法律关系建立正确的有？',
+    ['分阶段建立，委托合同签订→委托关系建立','竞买合同签订→竞买关系建立','拍卖成交→竞买人转化为买受人','委托人与买受人关系基于合同建立'],
+    [0,1,2], '委托人与买受人关系基于法律规定而非直接合同。','拍卖程序与流程'),
+  Q('法律','拍卖法律制度','第二章 拍卖法律关系','case',1,true,
+    '某国有企业委托拍卖公司拍卖商业房产(保留价500万元)。甲公司以680万元竞得并签署成交确认书、支付价款和佣金。但委托人"以拍卖人未充分履行宣传推广义务，成交价低于市场价值"为由拒绝移交标的。问题：1.本案涉及哪些拍卖法律关系？2.买受人甲公司应向谁主张权利？3.拍卖人承担违约责任后可否向委托人追偿？',
+    [], null, '要点：①四方关系：委托拍卖+竞买关系+买受关系+委托人与买受人关系；②甲公司应向拍卖人主张权利；③拍卖人可向违约委托人追偿。','拍卖程序与流程'),
+];
+QUESTION_BANK.push(...lawCh2);
+
+// ==================== 法律科 第三章 拍卖当事人 ====================
+const lawCh3 = [
+  Q('法律','拍卖法律制度','第三章 拍卖当事人','single',1,true,
+    '拍卖人是指？',
+    ['依法从事拍卖活动的自然人、法人或组织','依《拍卖法》和《公司法》设立的从事拍卖活动的企业法人','取得拍卖师资格证书的专业人员','委托拍卖人拍卖物品的公民、法人或组织'],
+    1, '拍卖人必须是企业法人，非自然人。','中华人民共和国拍卖法'),
+  Q('法律','拍卖法律制度','第三章 拍卖当事人','single',2,true,
+    '拍卖师资格考核由谁统一组织？',
+    ['省级商务主管部门','拍卖行业协会','人力资源和社会保障部门','工商行政管理部门'],
+    1, '拍卖师资格考核由拍卖行业协会统一组织。','拍卖行业管理'),
+  Q('法律','拍卖法律制度','第三章 拍卖当事人','single',3,true,
+    '声明不保证真伪或品质的免责声明，在明知或应知瑕疵时？',
+    ['仍然有效','部分有效','免责声明无效','效力由法院认定'],
+    2, '明知或应知瑕疵时，免责声明无效。','中华人民共和国拍卖法'),
+  Q('法律','拍卖法律制度','第三章 拍卖当事人','single',4,true,
+    '买受人是指？',
+    ['参加竞购拍卖标的的自然人、法人或组织','以最高应价购得拍卖标的的竞买人','委托拍卖的公民、法人或组织','依法从事拍卖活动的企业法人'],
+    1, '买受人=以最高应价购得标的的竞买人。','中华人民共和国拍卖法'),
+  Q('法律','拍卖法律制度','第三章 拍卖当事人','single',5,true,
+    '竞买人一经应价？',
+    ['可以随时撤回','经拍卖师同意后可撤回','不得撤回','在落槌确认成交前可撤回'],
+    2, '不得撤回——这是竞价的基本约束力。','拍卖程序与流程'),
+  Q('法律','拍卖法律制度','第三章 拍卖当事人','multi',1,true,
+    '设立拍卖企业应当具备哪些条件？',
+    ['符合法律法规的注册资本','有自己的名称、组织机构、住所和章程','有相适应的拍卖师和其他工作人员','有符合规定的拍卖业务规则'],
+    [0,1,2,3], '四项均为法定条件。','中华人民共和国拍卖法'),
+  Q('法律','拍卖法律制度','第三章 拍卖当事人','multi',2,true,
+    '拍卖人的法律权利包括？',
+    ['开展拍卖活动的自主权','指定拍卖师','要求委托人说明标的来源和瑕疵','收取佣金'],
+    [0,1,2,3], '四项均为拍卖人权利。','中华人民共和国拍卖法'),
+  Q('法律','拍卖法律制度','第三章 拍卖当事人','multi',3,true,
+    '委托人的法律义务包括？',
+    ['说明标的来源和瑕疵','不得参与竞买','移交拍卖标的','支付拍卖佣金'],
+    [0,1,2,3], '四项均为委托人义务。','中华人民共和国拍卖法'),
+  Q('法律','拍卖法律制度','第三章 拍卖当事人','multi',4,true,
+    '竞买人意思表示的特征有？',
+    ['公开性','竞争性','不可撤回性','需要确认性'],
+    [0,1,2,3], '四项均为竞买人意思表示特征。','拍卖程序与流程'),
+  Q('法律','拍卖法律制度','第三章 拍卖当事人','multi',5,true,
+    '关于瑕疵担保责任正确的是？',
+    ['声明不保证真伪的，不承担瑕疵担保责任','明知瑕疵的，免责声明无效','委托人明知瑕疵未说明的，需承担责任','拍卖人可无条件免除瑕疵担保责任'],
+    [0,1,2], '拍卖人不能无条件免除瑕疵担保责任。','中华人民共和国拍卖法'),
+];
+QUESTION_BANK.push(...lawCh3);
+
+// ==================== 实务科 第一章 我国的拍卖市场 ====================
+const pracCh1 = [
+  Q('实务','拍卖理论与实务','第一章 我国的拍卖市场','single',1,true,
+    '标志着我国拍卖制度正式恢复的事件是？',
+    ['1997年《拍卖法》实施','1986年国营广州拍卖行成立','1992年国务院发布公物处理通知','2012年网络司法拍卖全面推行'],
+    1, '1986年国营广州拍卖行成立是恢复标志。','拍卖基础理论'),
+  Q('实务','拍卖理论与实务','第一章 我国的拍卖市场','single',2,true,
+    '我国拍卖市场"政策推动与市场扩容阶段"的时间范围是？',
+    ['1986-1996年','1998-2011年','2012年至今','1997-2011年'],
+    1, '1998-2011年为政策推动与市场扩容阶段。','拍卖基础理论'),
+  Q('实务','拍卖理论与实务','第一章 我国的拍卖市场','single',3,true,
+    '下列不属于制度主导型资源配置市场拍品的是？',
+    ['缉私罚没物资','破产企业厂房设备','个人委托的二手车','国有建设用地使用权'],
+    2, '个人委托为市场引导型，非制度主导。','拍卖标的与分类'),
+  Q('实务','拍卖理论与实务','第一章 我国的拍卖市场','single',4,true,
+    '我国首次从政策层面明确拍卖行为在公物处置中作用的文件是？',
+    ['《拍卖法》','《关于公物处理实行公开拍卖的通知》','《网络拍卖规程》','《拍卖管理办法》'],
+    1, '1992年国务院《关于公物处理实行公开拍卖的通知》。','拍卖基础理论'),
+  Q('实务','拍卖理论与实务','第一章 我国的拍卖市场','single',5,true,
+    '数字化转型与智能融合阶段，我国拍卖行业的核心特征是？',
+    ['法治化、市场扩容','线上化、智能化、平台化','法规初创、缺乏监管','专业化分工、国际化布局'],
+    1, '当前阶段核心特征：线上化、智能化、平台化。','拍卖行业管理'),
+  Q('实务','拍卖理论与实务','第一章 我国的拍卖市场','multi',1,true,
+    '我国拍卖市场中"市场引导型商业交易市场"的代表性领域包括？',
+    ['不动产拍卖','文物艺术品拍卖','农产品拍卖','司法涉案资产拍卖','机动车拍卖'],
+    [0,1,2,4], '司法涉案资产属于制度主导型。','拍卖标的与分类'),
+  Q('实务','拍卖理论与实务','第一章 我国的拍卖市场','multi',2,false,
+    '数字化转型与智能融合阶段，被引入拍卖行业的技术有？',
+    ['区块链','大数据','人工智能','虚拟现实','物联网'],
+    [0,1,2,3,4], '五项技术均已引入拍卖行业。','拍卖行业管理'),
+  Q('实务','拍卖理论与实务','第一章 我国的拍卖市场','multi',3,true,
+    '制度主导型资源配置市场的特征包括？',
+    ['委托主体为政府、国企、法院','流程标准化','社会公信力强','信息公开程度高','对资质要求严格'],
+    [0,1,2,3,4], '五项均为制度主导型市场特征。','拍卖标的与分类'),
+  Q('实务','拍卖理论与实务','第一章 我国的拍卖市场','multi',4,true,
+    '我国拍卖行业"十五五"时期的发展趋势包括？',
+    ['深度融入国家发展大局','智能化与可信化成为标配','专业化分工与全球化布局并进','从交易效率到综合价值创造','依赖政策红利生存'],
+    [0,1,2,3], '依赖政策红利非发展趋势。','拍卖行业管理'),
+  Q('实务','拍卖理论与实务','第一章 我国的拍卖市场','multi',5,false,
+    '拍卖市场营商环境建设的主要体现包括？',
+    ['行业自身规范与人才建设','行业协会自律与标准制定','法律法规的完善','政府管理部门协调机制','企业低水平重复建设'],
+    [0,1,2,3], '低水平重复建设非营商环境建设。','拍卖行业管理'),
+  Q('实务','拍卖理论与实务','第一章 我国的拍卖市场','case',1,true,
+    '某拍卖企业计划拓展新业务领域，请结合我国拍卖市场的四大类型及发展趋势，为该企业制定业务拓展的核心思路。',
+    [], null, '要点：①四大市场类型——制度主导型、市场引导型、创新与金融资产型、数字化平台型；②结合趋势选择细分赛道；③技术赋能提升服务能力。','拍卖行业管理'),
+  Q('实务','拍卖理论与实务','第一章 我国的拍卖市场','essay',1,true,
+    '论述技术革新对我国拍卖行业生态结构的重塑作用',
+    [], null, '要点：①网络拍卖实现全覆盖；②AI辅助鉴定和估价；③区块链保障交易可信；④平台化降低交易成本。','拍卖行业管理'),
+  Q('实务','拍卖理论与实务','第一章 我国的拍卖市场','essay',2,true,
+    '分析我国"创新与金融资产拍卖市场"的发展机遇与制度挑战，并提出建议',
+    [], null, '要点：①机遇——金融不良资产增加、碳排放权交易等；②挑战——法律法规滞后、专业人才短缺；③建议——完善制度、培育专业机构。','拍卖经济理论'),
+];
+QUESTION_BANK.push(...pracCh1);
+
+// ==================== 实务科 第二章 拍卖的策划 ====================
+const pracCh2 = [
+  Q('实务','拍卖理论与实务','第二章 拍卖的策划','single',1,false,
+    '商业策划是运用什么手段综合实施运行？',
+    ['广告、推广、批发、零售','广告、促销、公关、新闻','新闻、宣传、促销、推广','公关、广告、销售、售后'],
+    1, '商业策划运用广告、促销、公关、新闻四手段。','拍卖程序与流程'),
+  Q('实务','拍卖理论与实务','第二章 拍卖的策划','single',2,true,
+    '进行拍卖项目策划，必须先做好？',
+    ['消费市场分析','买方需求分析','委托方需求分析','项目可行性分析'],
+    3, '项目可行性分析是策划的前提。','市场分析与定价'),
+  Q('实务','拍卖理论与实务','第二章 拍卖的策划','single',3,true,
+    '什么是拍卖项目策划的前提和基础？',
+    ['项目策划书','项目可行性报告','项目推广方案','项目市场调查'],
+    3, '项目市场调查是策划的前提和基础。','市场分析与定价'),
+  Q('实务','拍卖理论与实务','第二章 拍卖的策划','single',4,false,
+    '捆绑法是用一种联系把自身与什么合为一体？',
+    ['无关的事物','相似价值的事物','具有一定价值的事物','价值容易移出的事物'],
+    2, '捆绑法是将自身与具有一定价值的事物联系。','拍卖程序与流程'),
+  Q('实务','拍卖理论与实务','第二章 拍卖的策划','single',5,true,
+    '拍卖项目策划需要什么特性？',
+    ['适合拍卖','具有附加值','广受欢迎','物美价廉'],
+    0, '标的必须具有适合拍卖的特性（如稀缺性、竞争性）。','拍卖程序与流程'),
+  Q('实务','拍卖理论与实务','第二章 拍卖的策划','multi',1,true,
+    '不了解委托方的什么，就很难提出可行的策划方案？',
+    ['需求','经营','业绩','动机'],
+    [0,3], '了解委托方需求和动机是策划的基础。','拍卖程序与流程'),
+  Q('实务','拍卖理论与实务','第二章 拍卖的策划','multi',2,true,
+    '拍卖项目策划书的作用在于帮助？',
+    ['管理者更有效实施管理','策划人员与委托方沟通','委托方思考整体营销战略','策划人员提出解决方法'],
+    [0,1,2,3], '四项均为策划书的作用。','拍卖程序与流程'),
+  Q('实务','拍卖理论与实务','第二章 拍卖的策划','multi',3,true,
+    '拍卖项目策划中的市场分析要对什么进行分析判断？',
+    ['成交的概率','市场的定位','买家的定位','价格的预测'],
+    [0,1,2,3], '四项均为市场分析的内容。','市场分析与定价'),
+  Q('实务','拍卖理论与实务','第二章 拍卖的策划','multi',4,false,
+    '策划创意的目的是显示出？',
+    ['活跃性','群众性','独特性','新颖性'],
+    [2,3], '创意追求独特性和新颖性。','拍卖程序与流程'),
+  Q('实务','拍卖理论与实务','第二章 拍卖的策划','multi',5,false,
+    '优秀的策划人员需要具备？',
+    ['记忆能力','分析能力','动手能力','洞察能力'],
+    [0,1,2,3], '四项能力均需具备。','拍卖程序与流程'),
+  Q('实务','拍卖理论与实务','第二章 拍卖的策划','case',1,true,
+    '某房产拍卖项目位于交通枢纽与黄金地段，集商业、居住、健身、休闲、娱乐于一体。附近高档住宅小区配套齐全，市场供小于求。但本地区居民收入及购买力不高，同期有同质性较高的竞品楼盘，三室户型偏多而市场对两室户型需求更大。请采用SWOT分析法对该项目进行简略分析。',
+    [], null, '要点：S-地段好配套全；W-居民购买力低/户型结构不合理；O-市场供小于求/两室需求大；T-竞品楼盘同质化。','市场分析与定价'),
+  Q('实务','拍卖理论与实务','第二章 拍卖的策划','essay',1,true,
+    '论述市场调查在拍卖项目策划中的重要性',
+    [], null, '要点：①了解市场需求和买家偏好；②评估标的的市场定位和价格预测；③识别竞争和风险因素；④为策划方案提供数据支持。','市场分析与定价'),
+  Q('实务','拍卖理论与实务','第二章 拍卖的策划','essay',2,true,
+    '试述拍卖项目市场调研的主要内容',
+    [], null, '要点：①市场环境分析；②目标买家群体调查；③同类标的价格比较；④法律法规和政策调研。','市场分析与定价'),
+];
+QUESTION_BANK.push(...pracCh2);
+
+// ==================== 实务科 第三章 公物拍卖 ====================
+const pracCh3 = [
+  Q('实务','拍卖理论与实务','第三章 公物拍卖','single',1,true,
+    '《拍卖法》第9条规定的"公物"是指？',
+    ['国家所有的财产','国家行政机关依法没收的物品','公共使用的物品','政府机关的办公用品'],
+    1, '公物主要指国家行政机关依法没收的物品、追缴的赃物等。','拍卖标的与分类'),
+  Q('实务','拍卖理论与实务','第三章 公物拍卖','single',2,true,
+    '公物拍卖人的指定机关是？',
+    ['省级人民政府','设区的市级以上人民政府','县级人民政府','国务院'],
+    1, '公物拍卖人由设区的市级以上人民政府指定。','拍卖标的与分类'),
+  Q('实务','拍卖理论与实务','第三章 公物拍卖','single',3,true,
+    '公物拍卖的佣金收取规则是？',
+    ['向委托人和买受人双方收取','仅向买受人收取','仅向委托人收取','不收佣金'],
+    1, '公物拍卖佣金仅向买受人单方收取。','拍卖程序与流程'),
+  Q('实务','拍卖理论与实务','第三章 公物拍卖','single',4,true,
+    '公物拍卖前进行资产评估的要求是？',
+    ['无需评估','应当进行评估','可选择是否评估','仅对高价值标的评估'],
+    1, '公物拍卖前应当依法进行资产评估。','拍卖程序与流程'),
+  Q('实务','拍卖理论与实务','第三章 公物拍卖','single',5,false,
+    '公物拍卖"动态淘汰制"的适用对象是？',
+    ['所有拍卖企业','政府指定的公物拍卖企业','文物拍卖企业','外资拍卖企业'],
+    1, '动态淘汰制针对政府指定的公物拍卖企业。','拍卖标的与分类'),
+  Q('实务','拍卖理论与实务','第三章 公物拍卖','multi',1,true,
+    '公物拍卖的特点包括？',
+    ['委托主体的特殊性','标的来源的特定性','拍卖程序的规范性','佣金收取的单方性'],
+    [0,1,2,3], '四项均为公物拍卖特点。','拍卖标的与分类'),
+  Q('实务','拍卖理论与实务','第三章 公物拍卖','multi',2,true,
+    '违反公物拍卖规定的法律责任包括？',
+    ['行政处罚','民事赔偿','刑事责任','行业通报批评'],
+    [0,1,2,3], '四种责任形式均可能适用。','相关法律法规索引'),
+];
+QUESTION_BANK.push(...pracCh3);
+
+// ===================================================================
+// API 层（替换 localStorage）
+// ===================================================================
+const API_BASE = '';
+let authToken = null;
+let appState = { errors: {}, progress: {}, reviewSessions: [] };
+
+async function api(path, options = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
+  const res = await fetch(API_BASE + path, { ...options, headers: { ...headers, ...options.headers } });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || '请求失败');
+  return data;
+}
+
+// ===== 用户系统 =====
+let currentUser = null;
+
+// ===== 配置 =====
+async function getSystemTitle() {
+  try { const d = await api('/api/config'); return d.title; } catch(e) { return '威拍拍卖师秘籍'; }
+}
+
+function updateAllTitles(title) {
+  const loginTitle = document.getElementById('loginTitle');
+  if (loginTitle && loginTitle.childNodes[0]) loginTitle.childNodes[0].textContent = title;
+  const headerTitle = document.getElementById('headerTitle');
+  if (headerTitle) headerTitle.textContent = title;
+  document.title = title + ' · 复习练习系统';
+  const titleInput = document.getElementById('adminNewTitle');
+  if (titleInput) titleInput.value = title;
+}
+
+async function changeSystemTitle() {
+  const newTitle = document.getElementById('adminNewTitle').value.trim();
+  const msgEl = document.getElementById('adminTitleMsg');
+  if (!newTitle || newTitle.length < 2) { msgEl.innerHTML = '<span style="color:var(--red);">⚠️ 标题至少2个字符</span>'; return; }
+  try {
+    await api('/api/config', { method: 'PUT', body: JSON.stringify({ title: newTitle }) });
+    updateAllTitles(newTitle);
+    msgEl.innerHTML = '<span style="color:var(--green);">✅ 系统标题已更新</span>';
+  } catch(e) { msgEl.innerHTML = '<span style="color:var(--red);">⚠️ ' + e.message + '</span>'; }
+}
+
+// ===== 登录/登出 =====
+async function login() {
+  const username = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value;
+  const errEl = document.getElementById('loginError');
+  if (!username || !password) { errEl.textContent = '⚠️ 请输入账号和密码'; return; }
+
+  try {
+    const data = await api('/api/login', { method: 'POST', body: JSON.stringify({ username, password }) });
+    authToken = data.token;
+    currentUser = { username: data.username, isAdmin: data.isAdmin };
+    // 持久化登录状态，刷新页面不丢失
+    sessionStorage.setItem('authToken', authToken);
+    sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+    appState = await loadStateFromServer();
+
+    document.getElementById('loginOverlay').style.display = 'none';
+    document.getElementById('app-container').style.display = '';
+    document.getElementById('displayUser').textContent = data.username + (data.isAdmin ? ' [管理员]' : '');
+    if (data.isAdmin) document.getElementById('nav-admin').style.display = '';
+
+    document.getElementById('loginUser').value = '';
+    document.getElementById('loginPass').value = '';
+    document.getElementById('loginError').textContent = '';
+    init();
+  } catch(e) {
+    errEl.textContent = '❌ ' + e.message;
+  }
+}
+
+function logout() {
+  if (confirm('确定要退出登录吗？')) {
+    authToken = null;
+    currentUser = null;
+    sessionStorage.removeItem('authToken');
+    sessionStorage.removeItem('currentUser');
+    appState = { errors: {}, progress: {}, reviewSessions: [] };
+    document.getElementById('loginOverlay').style.display = '';
+    document.getElementById('app-container').style.display = 'none';
+    document.getElementById('nav-admin').style.display = 'none';
+    shuffleMap = {}; shuffleReverse = {};
+    currentQuestions = [];
+    switchPanel('practice');
+  }
+}
+
+// ===== 页面刷新后自动恢复登录 =====
+async function tryAutoLogin() {
+  const savedToken = sessionStorage.getItem('authToken');
+  const savedUser = sessionStorage.getItem('currentUser');
+  if (!savedToken || !savedUser) {
+    document.getElementById('loginOverlay').style.display = '';
+    document.getElementById('app-container').style.display = 'none';
+    return;
+  }
+  // 有 token：立即显示应用，后台验证
+  authToken = savedToken;
+  currentUser = JSON.parse(savedUser);
+  document.getElementById('loginOverlay').style.display = 'none';
+  document.getElementById('app-container').style.display = '';
+  document.getElementById('displayUser').textContent = currentUser.username + (currentUser.isAdmin ? ' [管理员]' : '');
+  if (currentUser.isAdmin) document.getElementById('nav-admin').style.display = '';
+  init();
+  // 后台加载数据
+  try {
+    appState = await loadStateFromServer();
+    updateProgressBar();
+  } catch(e) {}
+  // 后台验证 token 有效性
+  try {
+    await api('/api/progress');
+  } catch(e) {
+    // token 失效，强制退出
+    logout();
+  }
+}
+
+// ===== 进度同步 =====
+async function loadStateFromServer() {
+  try {
+    const [pRes, eRes] = await Promise.all([
+      api('/api/progress'),
+      api('/api/errors')
+    ]);
+    return { progress: pRes.progress || {}, errors: eRes.errors || {}, reviewSessions: [] };
+  } catch(e) {
+    return { errors: {}, progress: {}, reviewSessions: [] };
+  }
+}
+
+function loadState() { return { errors: {}, progress: {}, reviewSessions: [] }; }
+
+async function saveState() {
+  if (!authToken) return;
+  // 只同步有变化的 progress 和 errors
+  const progressToSync = {};
+  for (const [qid, entry] of Object.entries(appState.progress)) {
+    if (entry._dirty !== false) { progressToSync[qid] = entry; entry._dirty = false; }
+  }
+  if (Object.keys(progressToSync).length > 0) {
+    try { await api('/api/progress', { method: 'PUT', body: JSON.stringify({ progress: progressToSync }) }); } catch(e) {}
+  }
+}
+
+function setQStatus(qid, status) {
+  if (!appState.progress[qid]) appState.progress[qid] = {};
+  appState.progress[qid].status = status;
+  appState.progress[qid].time = Date.now();
+  appState.progress[qid]._dirty = true;
+  saveState();
+}
+
+function saveErrorEntry(qid, entry) {
+  appState.errors[qid] = { ...entry, savedAt: Date.now() };
+  // 异步同步到服务端
+  api('/api/errors', { method: 'PUT', body: JSON.stringify({ errors: { [qid]: entry } }) }).catch(() => {});
+}
+
+function removeErrorEntry(qid) {
+  delete appState.errors[qid];
+  api('/api/errors/' + encodeURIComponent(qid), { method: 'DELETE' }).catch(() => {});
+}
+
+// ===== 管理员功能 =====
+async function changeAdminPassword() {
+  const oldPw = document.getElementById('adminOldPass').value;
+  const new1 = document.getElementById('adminNewPass1').value;
+  const new2 = document.getElementById('adminNewPass2').value;
+  const msgEl = document.getElementById('adminPwdMsg');
+  if (!oldPw || !new1 || !new2) { msgEl.innerHTML = '<span style="color:var(--red);">⚠️ 请填写所有密码字段</span>'; return; }
+  if (new1 !== new2) { msgEl.innerHTML = '<span style="color:var(--red);">⚠️ 两次输入的新密码不一致</span>'; return; }
+  if (new1.length < 6) { msgEl.innerHTML = '<span style="color:var(--red);">⚠️ 新密码至少6位</span>'; return; }
+  try {
+    await api('/api/admin/password', { method: 'PUT', body: JSON.stringify({ oldPassword: oldPw, newPassword: new1 }) });
+    msgEl.innerHTML = '<span style="color:var(--green);">✅ 管理员密码已更新</span>';
+    document.getElementById('adminOldPass').value = '';
+    document.getElementById('adminNewPass1').value = '';
+    document.getElementById('adminNewPass2').value = '';
+  } catch(e) { msgEl.innerHTML = '<span style="color:var(--red);">❌ ' + e.message + '</span>'; }
+}
+
+async function addUser() {
+  const username = document.getElementById('newUsername').value.trim();
+  const password = document.getElementById('newUserPass').value;
+  if (!username || !password) { alert('请填写账号和密码'); return; }
+  if (username === 'admin') { alert('不能创建名为 admin 的账号'); return; }
+  if (password.length < 4) { alert('密码至少4位'); return; }
+  try {
+    await api('/api/users', { method: 'POST', body: JSON.stringify({ username, password }) });
+    document.getElementById('newUsername').value = '';
+    document.getElementById('newUserPass').value = '';
+    renderAdminUserTable();
+  } catch(e) { alert('❌ ' + e.message); }
+}
+
+async function deleteUser(username) {
+  if (!confirm(`确定要删除用户「${username}」吗？该用户的所有学习记录将被清除。`)) return;
+  try {
+    await api('/api/users/' + encodeURIComponent(username), { method: 'DELETE' });
+    renderAdminUserTable();
+  } catch(e) { alert('❌ ' + e.message); }
+}
+
+async function resetUserPassword(username) {
+  const newPass = prompt(`为「${username}」设置新密码（至少4位）：`);
+  if (!newPass || newPass.length < 4) { alert('密码至少4位'); return; }
+  try {
+    await api('/api/users/' + encodeURIComponent(username) + '/password', { method: 'PUT', body: JSON.stringify({ password: newPass }) });
+    alert('✅ 「' + username + '」的密码已重置');
+  } catch(e) { alert('❌ ' + e.message); }
+}
+
+async function renderAdminUserTable() {
+  try {
+    const data = await api('/api/users');
+    document.getElementById('userCount').textContent = data.users.length;
+    let html = '<table class="admin-table"><thead><tr><th>账号</th><th>角色</th><th>创建时间</th><th>操作</th></tr></thead><tbody>';
+    data.users.forEach(u => {
+      const created = u.createdAt ? new Date(u.createdAt * 1000).toLocaleString('zh-CN') : '—';
+      html += `<tr><td>${escHtml(u.username)}</td><td>${u.isAdmin ? '🔧 管理员' : '👤 普通用户'}</td><td>${created}</td><td>`;
+      if (!u.isAdmin) {
+        html += `<button class="btn-sm" onclick="resetUserPassword('${escHtml(u.username)}')" style="margin-right:6px;">🔑 改密</button>`;
+        html += `<button class="btn-sm-del" onclick="deleteUser('${escHtml(u.username)}')">🗑️ 删除</button>`;
+      } else {
+        html += `<span style="color:var(--text2);font-size:0.8em;">系统账号</span>`;
+      }
+      html += `</td></tr>`;
+    });
+    html += '</tbody></table>';
+    document.getElementById('userTableContainer').innerHTML = html;
+  } catch(e) {}
+}
+
+// ===== 教材系统 =====
+async function loadBooksFromServer() {
+  try { const d = await api('/api/books'); return d.books || []; } catch(e) { return []; }
+}
+
+async function loadBooks() { return await loadBooksFromServer(); }
+
+async function renderBookGrid() {
+  const books = await loadBooksFromServer();
+  const grid = document.getElementById('bookGrid');
+  if (!grid) return;
+  if (books.length === 0) {
+    grid.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text2);grid-column:1/-1;"><p style="font-size:2em;">📭</p><p>暂无教材，请联系管理员上传</p></div>';
+    return;
+  }
+  const typeIcons = { 'pdf': '📄', 'doc': '📝', 'docx': '📝', 'jpg': '🖼️', 'jpeg': '🖼️', 'png': '🖼️' };
+  const typeNames = { 'pdf': 'PDF文档', 'doc': 'Word文档', 'docx': 'Word文档', 'jpg': '图片', 'jpeg': '图片', 'png': '图片' };
+  let html = '';
+  books.forEach(book => {
+    const icon = typeIcons[book.type] || '📁';
+    html += `<div class="book-card" onclick="openViewer('${book.id}')">`;
+    html += `<div class="book-icon">${icon}</div>`;
+    html += `<div class="book-name">${escHtml(book.name)}</div>`;
+    html += `<div class="book-type">${typeNames[book.type] || book.type} · ${formatSize(book.size || 0)}</div>`;
+    html += `</div>`;
+  });
+  grid.innerHTML = html;
+}
+
+function formatSize(bytes) {
+  if (!bytes) return '';
+  if (bytes < 1024) return bytes + 'B';
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + 'KB';
+  return (bytes / 1048576).toFixed(1) + 'MB';
+}
+
+function openViewer(bookId) {
+  if (!authToken) return;
+  const viewUrl = API_BASE + '/api/books/' + bookId + '/download?token=' + encodeURIComponent(authToken);
+  // 先用 fetch 获取文件信息
+  api('/api/books').then(d => {
+    const book = (d.books || []).find(b => b.id === bookId);
+    if (!book) return;
+    document.getElementById('viewerTitle').textContent = book.name;
+    const body = document.getElementById('viewerBody');
+    const ext = book.type || '';
+    if (ext === 'pdf') {
+      body.innerHTML = '<iframe src="' + viewUrl + '"></iframe>';
+    } else if (ext === 'jpg' || ext === 'jpeg' || ext === 'png') {
+      body.innerHTML = '<img src="' + viewUrl + '" alt="' + escHtml(book.name) + '">';
+    } else {
+      body.innerHTML = '<div class="viewer-unsupported"><p>📝 此格式建议下载查看</p><button onclick="downloadBook(\'' + book.id + '\')">⬇️ 下载查看</button></div>';
+    }
+    document.getElementById('viewerOverlay').style.display = 'flex';
+  });
+}
+
+function closeViewer() {
+  document.getElementById('viewerOverlay').style.display = 'none';
+  document.getElementById('viewerBody').innerHTML = '';
+}
+
+function downloadBook(bookId) {
+  if (!authToken) return;
+  window.open(API_BASE + '/api/books/' + bookId + '/download?token=' + encodeURIComponent(authToken), '_blank');
+}
+
+async function uploadBook() {
+  const nameInput = document.getElementById('bookName');
+  const fileInput = document.getElementById('bookFileInput');
+  const msgEl = document.getElementById('bookAdminMsg');
+  const file = fileInput.files[0];
+  if (!file) { msgEl.innerHTML = '<span style="color:var(--red);">⚠️ 请选择文件</span>'; return; }
+  const name = nameInput.value.trim() || file.name;
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['pdf','doc','docx','jpg','jpeg','png'].includes(ext)) {
+    msgEl.innerHTML = '<span style="color:var(--red);">⚠️ 不支持的格式</span>'; return;
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    msgEl.innerHTML = '<span style="color:var(--red);">⚠️ 文件过大（最大10MB）</span>'; return;
+  }
+  msgEl.innerHTML = '<span style="color:var(--accent2);">⏳ 正在上传...</span>';
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('name', name);
+    const headers = {};
+    if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
+    const res = await fetch(API_BASE + '/api/books/upload', { method: 'POST', headers, body: formData });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '上传失败');
+    msgEl.innerHTML = '<span style="color:var(--green);">✅ 教材已上传</span>';
+    nameInput.value = '';
+    fileInput.value = '';
+    renderBookGrid();
+    renderBookAdminTable();
+  } catch(e) { msgEl.innerHTML = '<span style="color:var(--red);">⚠️ ' + e.message + '</span>'; }
+}
+
+async function deleteBook(bookId) {
+  if (!confirm('确定要删除该教材吗？')) return;
+  try {
+    await api('/api/books/' + bookId, { method: 'DELETE' });
+    renderBookGrid();
+    renderBookAdminTable();
+  } catch(e) { alert('❌ ' + e.message); }
+}
+
+async function renameBook(bookId) {
+  const newName = prompt('输入新名称：');
+  if (!newName || !newName.trim()) return;
+  try {
+    await api('/api/books/' + bookId + '/rename', { method: 'PUT', body: JSON.stringify({ name: newName.trim() }) });
+    renderBookGrid();
+    renderBookAdminTable();
+  } catch(e) { alert('❌ ' + e.message); }
+}
+
+async function renderBookAdminTable() {
+  const books = await loadBooksFromServer();
+  const container = document.getElementById('bookAdminTable');
+  if (!container) return;
+  if (books.length === 0) { container.innerHTML = '<p style="color:var(--text2);font-size:0.9em;">暂无教材</p>'; return; }
+  const typeNames = { 'pdf': 'PDF', 'doc': 'Word', 'docx': 'Word', 'jpg': '图片', 'jpeg': '图片', 'png': '图片' };
+  let html = '<table class="admin-table"><thead><tr><th>名称</th><th>格式</th><th>大小</th><th>上传时间</th><th>操作</th></tr></thead><tbody>';
+  books.forEach(b => {
+    html += `<tr><td>${escHtml(b.name)}</td><td>${typeNames[b.type] || b.type}</td><td>${formatSize(b.size)}</td>`;
+    html += `<td>${new Date(b.uploadedAt * 1000).toLocaleString('zh-CN')}</td>`;
+    html += `<td><button class="btn-sm" onclick="renameBook('${b.id}')" style="margin-right:6px;">✏️ 重命名</button>`;
+    html += `<button class="btn-sm-del" onclick="deleteBook('${b.id}')">🗑️ 删除</button></td></tr>`;
+  });
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+function escHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ===== 键盘 ESC 关闭查看器 =====
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeViewer();
+});
+
+// ===== 初始化 =====
+getSystemTitle().then(title => updateAllTitles(title));
+// 选项随机排序缓存（仅内存，每次重置/刷新后重新洗牌）
+let shuffleMap = {};     // shuffleMap[qid][shuffledPos] = originalPos
+let shuffleReverse = {}; // shuffleReverse[qid][originalPos] = shuffledPos
+
+function getShuffledOrder(q) {
+  if (!shuffleMap[q.id]) {
+    const n = q.options.length;
+    const indices = Array.from({ length: n }, (_, i) => i);
+    // Fisher-Yates 洗牌
+    for (let i = n - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+    shuffleMap[q.id] = indices;       // shuffledPos → originalPos
+    shuffleReverse[q.id] = Array(n);
+    indices.forEach((orig, shuff) => { shuffleReverse[q.id][orig] = shuff; });
+  }
+  return shuffleMap[q.id];
+}
+
+// 全局变量
+let currentQuestions = [];
+let currentPage = 0;
+const PAGE_SIZE = 10;
+let typeFilters = ['all'];
+let starOnly = false;
+
+// 获取题目状态
+function getQStatus(qid) {
+  // 只返回状态字符串，而非整个 progress 对象
+  const p = appState.progress[qid];
+  return (p && p.status) ? p.status : null;
+}
+
+function setQStatus(qid, status) {
+  if (!appState.progress[qid]) appState.progress[qid] = {};
+  appState.progress[qid].status = status;
+  appState.progress[qid].time = Date.now();
+  saveState();
+}
+
+// 错题管理
+function getErrorEntry(qid) {
+  return appState.errors[qid] || null;
+}
+
+function saveErrorEntry(qid, entry) {
+  appState.errors[qid] = { ...entry, savedAt: Date.now() };
+  saveState();
+}
+
+function removeErrorEntry(qid) {
+  delete appState.errors[qid];
+  saveState();
+}
+
+// ===== 筛选逻辑 =====
+function getFilteredQuestions() {
+  let qs = [...QUESTION_BANK];
+
+  // 科目
+  const subj = document.getElementById('filterSubject').value;
+  if (subj !== 'all') qs = qs.filter(q => q.subject === subj);
+
+  // 章节
+  const chap = document.getElementById('filterChapter').value;
+  if (chap !== 'all') qs = qs.filter(q => q.chapter === chap);
+
+  // 题型
+  if (!typeFilters.includes('all')) {
+    qs = qs.filter(q => {
+      if (typeFilters.includes('single') && q.type === 'single') return true;
+      if (typeFilters.includes('multi') && q.type === 'multi') return true;
+      if (typeFilters.includes('case') && q.type === 'case') return true;
+      if (typeFilters.includes('essay') && q.type === 'essay') return true;
+      return false;
+    });
+  }
+
+  // 重点题
+  if (starOnly) qs = qs.filter(q => q.isStar);
+
+  return qs;
+}
+
+function applyFilters() {
+  // 更新章节下拉
+  const subj = document.getElementById('filterSubject').value;
+  const chapSelect = document.getElementById('filterChapter');
+  const chapters = [...new Set(QUESTION_BANK.filter(q => subj === 'all' || q.subject === subj).map(q => q.chapter))].sort();
+  chapSelect.innerHTML = '<option value="all">全部章节</option>';
+  const prefix = subj === '概论' ? '' : (subj === '法律' ? '' : '');
+  chapters.forEach(ch => {
+    const opt = document.createElement('option');
+    opt.value = ch;
+    opt.textContent = ch;
+    chapSelect.appendChild(opt);
+  });
+
+  currentQuestions = getFilteredQuestions();
+  currentPage = 0;
+  renderQuestions();
+  updateProgressBar();
+}
+
+function toggleTypeFilter(btn) {
+  const type = btn.dataset.type;
+  if (type === 'all') {
+    typeFilters = ['all'];
+    document.querySelectorAll('#filterType .btn-sm').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+  } else {
+    typeFilters = typeFilters.filter(t => t !== 'all');
+    if (typeFilters.includes(type)) {
+      typeFilters = typeFilters.filter(t => t !== type);
+      btn.classList.remove('on');
+    } else {
+      typeFilters.push(type);
+      btn.classList.add('on');
+    }
+    if (typeFilters.length === 0) {
+      typeFilters = ['all'];
+      document.querySelector('#filterType .btn-sm[data-type="all"]').classList.add('on');
+    }
+  }
+  applyFilters();
+}
+
+function toggleStarFilter() {
+  starOnly = !starOnly;
+  const btn = document.getElementById('btnStarOnly');
+  if (starOnly) btn.classList.add('on');
+  else btn.classList.remove('on');
+  applyFilters();
+}
+
+function randomizeQuestions() {
+  currentQuestions = getFilteredQuestions();
+  // Fisher-Yates shuffle
+  for (let i = currentQuestions.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [currentQuestions[i], currentQuestions[j]] = [currentQuestions[j], currentQuestions[i]];
+  }
+  const count = parseInt(document.getElementById('filterCount').value) || 20;
+  currentQuestions = currentQuestions.slice(0, count);
+  currentPage = 0;
+  renderQuestions();
+  updateProgressBar();
+}
+
+// ===== 渲染题目 =====
+function renderQuestions() {
+  const container = document.getElementById('questionContainer');
+  const pagination = document.getElementById('pagination');
+
+  if (currentQuestions.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text2);"><p style="font-size:2em;">📭</p><p>没有符合条件的题目，请调整筛选条件</p></div>';
+    pagination.innerHTML = '';
+    return;
+  }
+
+  const start = currentPage * PAGE_SIZE;
+  const end = Math.min(start + PAGE_SIZE, currentQuestions.length);
+  const pageQs = currentQuestions.slice(start, end);
+
+  let html = '';
+  pageQs.forEach((q, idx) => {
+    const globalIdx = start + idx + 1;
+    const status = getQStatus(q.id);
+    const errorEntry = getErrorEntry(q.id);
+
+    let cardClass = '';
+    if (status === 'wrong') cardClass = 'wrong';
+    else if (status === 'hesitate') cardClass = 'hesitate';
+    else if (status === 'correct') cardClass = 'correct';
+
+    const typeNames = { single: '单选题', multi: '多选题', case: '案例分析', essay: '论述题' };
+    const typeName = typeNames[q.type] || q.type;
+
+    html += `<div class="q-card ${cardClass}" id="q-${q.id}">`;
+    html += `<div class="q-header">`;
+    html += `<div class="q-badges">`;
+    html += `<span class="q-badge subject">${q.subject}</span>`;
+    html += `<span class="q-badge chapter">${q.chapter}</span>`;
+    html += `<span class="q-badge type">${typeName}</span>`;
+    if (q.isStar) html += `<span class="q-badge star">⭐ 重点</span>`;
+    html += `</div>`;
+    html += `<span class="q-number">#${globalIdx} / ${currentQuestions.length}</span>`;
+    html += `</div>`;
+
+    html += `<div class="q-title">${q.title}</div>`;
+
+    // 选项（随机排序）
+    if (q.options.length > 0 && (q.type === 'single' || q.type === 'multi')) {
+      html += `<div class="q-options">`;
+      const labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const inputType = q.type === 'single' ? 'radio' : 'checkbox';
+      const shuffled = getShuffledOrder(q); // shuffledPos → originalPos
+      shuffled.forEach((origIdx, shuffIdx) => {
+        const opt = q.options[origIdx];
+        html += `<div class="q-option" id="opt-${q.id}-${shuffIdx}" onclick="selectOption('${q.id}', ${shuffIdx}, '${q.type}')">`;
+        html += `<input type="${inputType}" name="q-${q.id}" value="${shuffIdx}" style="pointer-events:none;flex-shrink:0;">`;
+        html += `<span>${labels[shuffIdx]}. ${opt}</span>`;
+        html += `</div>`;
+      });
+      html += `</div>`;
+
+      html += `<div class="q-check-area">`;
+      html += `<button class="btn-check" onclick="checkAnswer('${q.id}')">✅ 提交答案</button>`;
+      html += `<button class="btn-show" onclick="showAnswer('${q.id}')">💡 显示答案</button>`;
+      html += `</div>`;
+      html += `<div class="q-feedback" id="fb-${q.id}"></div>`;
+    } else {
+      // 综合题/论述题——自评
+      html += `<div style="color:var(--text2);font-size:0.9em;margin-bottom:12px;">📝 本题为${typeName}，请在纸上作答后对照要点自我评估。</div>`;
+      html += `<button class="btn-show" onclick="showAnswer('${q.id}')">💡 显示参考答案要点</button>`;
+      html += `<div class="q-feedback" id="fb-${q.id}"></div>`;
+    }
+
+    // 自我评估区
+    html += `<div class="self-assess" id="sa-${q.id}" style="${status ? '' : 'display:none;'}">`;
+    html += `<span>自我评估：</span>`;
+    html += `<button class="rate-wrong ${status==='wrong'?'active':''}" onclick="rateQuestion('${q.id}', 'wrong')">❌ 答错</button>`;
+    html += `<button class="rate-hesitate ${status==='hesitate'?'active':''}" onclick="rateQuestion('${q.id}', 'hesitate')">⚡ 犹豫</button>`;
+    html += `<button class="rate-correct ${status==='correct'?'active':''}" onclick="rateQuestion('${q.id}', 'correct')">✅ 正确</button>`;
+    html += `</div>`;
+
+    // 错题笔记区（始终渲染内部元素，通过 display 控制显隐）
+    const showNote = (status === 'wrong' || status === 'hesitate');
+    html += `<div class="note-input" id="note-${q.id}" style="${showNote ? 'display:block;' : 'display:none;'}">`;
+    html += `<select id="cause-${q.id}"><option value="">选择错误根因...</option>`;
+    ['概念混淆','遗忘','理解偏差','审题大意','其他'].forEach(c => {
+      html += `<option value="${c}" ${errorEntry&&errorEntry.rootCause===c?'selected':''}>${c}</option>`;
+    });
+    html += `</select>`;
+    html += `<textarea id="note-text-${q.id}" placeholder="修正笔记（正确理解是什么）...">${errorEntry ? errorEntry.note || '' : ''}</textarea>`;
+    html += `<button onclick="saveErrorNote('${q.id}')">💾 保存到错题本</button>`;
+    html += `</div>`;
+
+    html += `</div>`;
+  });
+
+  container.innerHTML = html;
+
+  // 分页
+  const totalPages = Math.ceil(currentQuestions.length / PAGE_SIZE);
+  let pagHtml = '';
+  pagHtml += `<button ${currentPage===0?'disabled':''} onclick="goPage(${currentPage-1})">◀ 上一页</button>`;
+  pagHtml += `<span>第 ${currentPage+1} / ${totalPages} 页（共 ${currentQuestions.length} 题）</span>`;
+  pagHtml += `<button ${currentPage+1>=totalPages?'disabled':''} onclick="goPage(${currentPage+1})">下一页 ▶</button>`;
+  pagination.innerHTML = pagHtml;
+
+  // 恢复已显示的答案
+  pageQs.forEach(q => {
+    if (appState.progress[q.id] && appState.progress[q.id].answerShown) {
+      showAnswer(q.id, true);
+    }
+  });
+}
+
+function goPage(page) {
+  currentPage = page;
+  renderQuestions();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function selectOption(qid, oi, type) {
+  const optEl = document.getElementById(`opt-${qid}-${oi}`);
+  if (!optEl) return;
+  const isSelected = optEl.classList.contains('selected');
+
+  if (type === 'single') {
+    // 单选：先清除所有选中
+    const shuffleOrder = shuffleMap[qid] || [];
+    shuffleOrder.forEach((_, shuffIdx) => {
+      const el = document.getElementById(`opt-${qid}-${shuffIdx}`);
+      if (el) el.classList.remove('selected');
+      const inp = document.querySelector(`input[name="q-${qid}"][value="${shuffIdx}"]`);
+      if (inp) inp.checked = false;
+    });
+    // 如果之前未选中，则选中当前；如果已选中，则取消（已在上一步清除）
+    if (!isSelected) {
+      optEl.classList.add('selected');
+      const inp = document.querySelector(`input[name="q-${qid}"][value="${oi}"]`);
+      if (inp) inp.checked = true;
+    }
+  } else {
+    // 多选：直接切换
+    optEl.classList.toggle('selected');
+    const inp = document.querySelector(`input[name="q-${qid}"][value="${oi}"]`);
+    if (inp) inp.checked = optEl.classList.contains('selected');
+  }
+}
+
+function checkAnswer(qid) {
+  const q = QUESTION_BANK.find(qq => qq.id === qid);
+  if (!q) return;
+
+  const fb = document.getElementById(`fb-${qid}`);
+  if (!fb) return;
+
+  const labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  let userAnswerShuffled = [];
+  if (q.type === 'single') {
+    const sel = document.querySelector(`input[name="q-${qid}"]:checked`);
+    if (sel) userAnswerShuffled = [parseInt(sel.value)];
+  } else if (q.type === 'multi') {
+    const sels = document.querySelectorAll(`input[name="q-${qid}"]:checked`);
+    sels.forEach(s => userAnswerShuffled.push(parseInt(s.value)));
+  }
+
+  if (userAnswerShuffled.length === 0) {
+    fb.className = 'q-feedback wrong show';
+    fb.innerHTML = '⚠️ 请先选择答案';
+    return;
+  }
+
+  // 洗牌索引 → 原始索引
+  const userAnswerOrig = userAnswerShuffled.map(si => shuffleMap[qid][si]);
+  const correctAnswerOrig = Array.isArray(q.answer) ? q.answer : [q.answer];
+  const isCorrect = arraysEqual([...userAnswerOrig].sort(), [...correctAnswerOrig].sort());
+
+  fb.className = `q-feedback ${isCorrect ? 'correct' : 'wrong'} show`;
+
+  // 高亮选项（在洗牌后的位置上）
+  const shuffleOrder = shuffleMap[qid] || [];
+  shuffleOrder.forEach((origIdx, shuffIdx) => {
+    const optEl = document.getElementById(`opt-${qid}-${shuffIdx}`);
+    if (!optEl) return;
+    optEl.classList.remove('correct-answer', 'wrong-answer');
+    if (correctAnswerOrig.includes(origIdx)) optEl.classList.add('correct-answer');
+    if (userAnswerShuffled.includes(shuffIdx) && !correctAnswerOrig.includes(origIdx)) optEl.classList.add('wrong-answer');
+  });
+
+  if (isCorrect) {
+    fb.innerHTML = `🎉 回答正确！${q.explanation ? '<br><small>💡 ' + q.explanation + '</small>' : ''}`;
+    if (!getQStatus(qid) || getQStatus(qid) !== 'correct') {
+      rateQuestion(qid, 'correct', true);
+    }
+  } else {
+    const correctShuffledLabels = correctAnswerOrig.map(origIdx => labels[shuffleReverse[qid][origIdx]]).join('、');
+    fb.innerHTML = `❌ 回答错误。正确答案是 <b>${correctShuffledLabels}</b>。${q.explanation ? '<br><small>💡 ' + q.explanation + '</small>' : ''}`;
+    // 自动记录错题到错题本
+    rateQuestion(qid, 'wrong', false);
+  }
+
+  if (!appState.progress[qid]) appState.progress[qid] = {};
+  appState.progress[qid].answerShown = true;
+  saveState();
+}
+
+function showAnswer(qid, silent) {
+  const q = QUESTION_BANK.find(qq => qq.id === qid);
+  if (!q) return;
+
+  const fb = document.getElementById(`fb-${qid}`);
+  if (!fb) return;
+
+  const labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  let answerText = '';
+
+  if (q.type === 'single' || q.type === 'multi') {
+    const correctAnswerOrig = Array.isArray(q.answer) ? q.answer : [q.answer];
+    const correctShuffledLabels = correctAnswerOrig.map(origIdx => labels[shuffleReverse[qid][origIdx]]).join('、');
+    answerText = `📌 正确答案：<b>${correctShuffledLabels}</b>`;
+  } else {
+    answerText = `📌 参考要点：<br>${q.explanation || '（请参阅教材相关内容）'}`;
+  }
+
+  fb.className = 'q-feedback correct show';
+  fb.innerHTML = answerText;
+
+  // 高亮正确选项（在洗牌后的位置上）
+  if (q.type === 'single' || q.type === 'multi') {
+    const correctAnswerOrig = Array.isArray(q.answer) ? q.answer : [q.answer];
+    correctAnswerOrig.forEach(origIdx => {
+      const shuffIdx = shuffleReverse[qid][origIdx];
+      const optEl = document.getElementById(`opt-${qid}-${shuffIdx}`);
+      if (optEl) optEl.classList.add('correct-answer');
+    });
+  }
+
+  // 展开自评区
+  if (!silent) {
+    const sa = document.getElementById(`sa-${qid}`);
+    if (sa) sa.style.display = 'flex';
+  }
+
+  if (!appState.progress[qid]) appState.progress[qid] = {};
+  appState.progress[qid].answerShown = true;
+  saveState();
+}
+
+function rateQuestion(qid, status, silent) {
+  // 更新状态
+  setQStatus(qid, status);
+
+  const sa = document.getElementById(`sa-${qid}`);
+  if (sa) {
+    sa.style.display = 'flex';
+    sa.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    const btn = sa.querySelector(`.rate-${status}`);
+    if (btn) btn.classList.add('active');
+  }
+
+  const note = document.getElementById(`note-${qid}`);
+  if (note) {
+    if (status === 'wrong' || status === 'hesitate') {
+      note.classList.add('show');
+      note.style.display = 'block';
+    } else if (status === 'correct') {
+      note.classList.remove('show');
+      note.style.display = 'none';
+      // 从错题本移除
+      if (getErrorEntry(qid)) removeErrorEntry(qid);
+    }
+  }
+
+  // 更新卡片样式
+  const card = document.getElementById(`q-${qid}`);
+  if (card) {
+    card.classList.remove('wrong', 'hesitate', 'correct');
+    if (status === 'wrong') card.classList.add('wrong');
+    else if (status === 'hesitate') card.classList.add('hesitate');
+    else if (status === 'correct') card.classList.add('correct');
+  }
+
+  updateProgressBar();
+
+  if (!silent) {
+    // 自动保存错题
+    if (status === 'wrong' || status === 'hesitate') {
+      saveErrorNote(qid, true);
+    }
+  }
+}
+
+function saveErrorNote(qid, auto) {
+  const noteEl = document.getElementById(`note-text-${qid}`);
+  const causeEl = document.getElementById(`cause-${qid}`);
+  const q = QUESTION_BANK.find(qq => qq.id === qid);
+  if (!q) return;
+
+  const rootCause = causeEl ? causeEl.value : '';
+  const note = noteEl ? noteEl.value : '';
+
+  if (auto && !rootCause && !note) {
+    // 自动模式且未填写，保留已有笔记不覆盖
+    const existing = getErrorEntry(qid);
+    if (existing) {
+      if (existing.rootCause && existing.rootCause !== '未分类') rootCause = existing.rootCause;
+      if (existing.note && existing.note !== '（待补充修正笔记）') note = existing.note;
+    }
+  }
+
+  const entry = {
+    qid,
+    subject: q.subject,
+    chapter: q.chapter,
+    title: q.title,
+    type: q.type,
+    rootCause: rootCause || '未分类',
+    note: note || '（待补充修正笔记）',
+    relatedPage: q.relatedPage || '',
+  };
+
+  saveErrorEntry(qid, entry);
+  updateProgressBar();
+
+  if (!auto) {
+    alert('✅ 已保存到错题本！');
+  }
+}
+
+// ===== 进度条 =====
+function updateProgressBar() {
+  const qs = currentQuestions.length > 0 ? currentQuestions : getFilteredQuestions();
+  const total = qs.length;
+  let correct = 0, hesitate = 0, wrong = 0, unanswered = 0;
+
+  qs.forEach(q => {
+    const s = getQStatus(q.id);
+    if (s === 'correct') correct++;
+    else if (s === 'hesitate') hesitate++;
+    else if (s === 'wrong') wrong++;
+    else unanswered++;
+  });
+
+  const done = correct + hesitate + wrong;
+  const pct = total > 0 ? Math.round(done / total * 100) : 0;
+
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent = `${done} / ${total}`;
+  document.getElementById('countCorrect').textContent = correct;
+  document.getElementById('countHesitate').textContent = hesitate;
+  document.getElementById('countWrong').textContent = wrong;
+  document.getElementById('countUnanswered').textContent = unanswered;
+}
+
+// ===== 错题本渲染 =====
+function renderErrorBook() {
+  const container = document.getElementById('errorBookContainer');
+  const causeFilter = document.getElementById('errorCauseFilter').value;
+  const subjectFilter = document.getElementById('errorSubjectFilter').value;
+
+  let errors = Object.values(appState.errors);
+  if (causeFilter !== 'all') errors = errors.filter(e => e.rootCause === causeFilter);
+  if (subjectFilter !== 'all') errors = errors.filter(e => e.subject === subjectFilter);
+
+  // 错误统计
+  const totalErrors = Object.keys(appState.errors).length;
+  const causeCount = {};
+  Object.values(appState.errors).forEach(e => {
+    causeCount[e.rootCause] = (causeCount[e.rootCause] || 0) + 1;
+  });
+
+  document.getElementById('errorStats').innerHTML = `
+    <div class="error-stat"><div class="num">${totalErrors}</div><div class="label">错题总数</div></div>
+    <div class="error-stat"><div class="num">${Object.keys(appState.errors).filter(k => appState.progress[k] && appState.progress[k].status === 'wrong').length}</div><div class="label">❌ 答错</div></div>
+    <div class="error-stat"><div class="num">${Object.keys(appState.errors).filter(k => appState.progress[k] && appState.progress[k].status === 'hesitate').length}</div><div class="label">⚡ 犹豫</div></div>
+    <div class="error-stat"><div class="num">${Object.values(appState.errors).filter(e => e.note && e.note !== '（待补充修正笔记）').length}</div><div class="label">📝 已做笔记</div></div>
+  `;
+
+  const causeColors = { '概念混淆': '#e74c3c', '遗忘': '#f39c12', '理解偏差': '#9b59b6', '审题大意': '#3498db', '其他': '#95a5a6', '未分类': '#7f8c8d' };
+  let causeHtml = '';
+  for (const [cause, count] of Object.entries(causeCount)) {
+    causeHtml += `<div class="root-cause-item"><div class="color-dot" style="background:${causeColors[cause]||'#95a5a6'}"></div><span>${cause}</span><span class="count">${count}</span></div>`;
+  }
+  document.getElementById('rootCauseChart').innerHTML = causeHtml;
+
+  if (errors.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text2);"><p style="font-size:2em;">🎉</p><p>错题本为空，继续保持！</p></div>';
+    return;
+  }
+
+  // 按时间倒序
+  errors.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
+
+  let html = '';
+  errors.forEach(e => {
+    const typeNames = { single: '单选', multi: '多选', case: '案例分析', essay: '论述' };
+    const status = getQStatus(e.qid);
+    const statusIcon = status === 'wrong' ? '❌' : (status === 'hesitate' ? '⚡' : '📌');
+
+    html += `<div class="q-card" style="border-left-color:${status==='wrong'?'var(--red)':'var(--orange)'};">`;
+    html += `<div class="q-header">`;
+    html += `<div class="q-badges">`;
+    html += `<span class="q-badge subject">${e.subject}</span>`;
+    html += `<span class="q-badge chapter">${e.chapter}</span>`;
+    html += `<span class="q-badge type">${typeNames[e.type]||e.type}</span>`;
+    html += `<span class="q-badge" style="background:${causeColors[e.rootCause]||'#95a5a6'};color:#fff;">${e.rootCause}</span>`;
+    if (e.relatedPage) html += `<span class="q-badge" style="background:var(--bg3);color:var(--green);">📎 ${e.relatedPage}</span>`;
+    html += `</div>`;
+    html += `<span style="color:var(--text2);font-size:0.8em;">${new Date(e.savedAt).toLocaleString('zh-CN')}</span>`;
+    html += `</div>`;
+    html += `<div class="q-title">${statusIcon} ${e.title}</div>`;
+    if (e.note) html += `<div style="background:var(--bg);padding:12px;border-radius:8px;font-size:0.9em;color:var(--text2);">📝 ${e.note}</div>`;
+    html += `<div style="margin-top:10px;display:flex;gap:8px;">`;
+    html += `<button class="btn-sm" onclick="switchToPractice('${e.qid}')">🔄 重新练习</button>`;
+    html += `<button class="btn-sm" style="color:var(--red);border-color:var(--red);" onclick="removeErrorEntry('${e.qid}');renderErrorBook();updateProgressBar();">🗑️ 移除</button>`;
+    html += `</div>`;
+    html += `</div>`;
+  });
+
+  container.innerHTML = html;
+}
+
+function switchToPractice(qid) {
+  // 在练习模式中找到对应题目，重置答题状态以便重新练习
+  currentQuestions = [QUESTION_BANK.find(q => q.id === qid)].filter(Boolean);
+  currentPage = 0;
+  // 清除该题的答案显示状态，避免自动显示答案
+  if (appState.progress[qid]) {
+    appState.progress[qid].answerShown = false;
+    saveState();
+  }
+  // 清除洗牌缓存，选项顺序重新随机
+  delete shuffleMap[qid];
+  delete shuffleReverse[qid];
+  switchPanel('practice');
+  renderQuestions();
+}
+
+// ===== 统计面板 =====
+function renderStats() {
+  // 模块数据
+  const modules = [
+    { name: '拍卖法律制度', key: '拍卖法律制度', color: 'var(--red)', examPct: 30 },
+    { name: '拍卖理论与实务', key: '拍卖理论与实务', color: 'var(--blue)', examPct: 40 },
+    { name: '拍卖经济学', key: '拍卖经济学', color: 'var(--purple)', examPct: 15 },
+    { name: '职业道德与规范', key: '职业道德与规范', color: 'var(--green)', examPct: 15 },
+  ];
+
+  let statsHtml = '';
+  modules.forEach(mod => {
+    const modQs = QUESTION_BANK.filter(q => q.module === mod.key);
+    const total = modQs.length;
+    let correct = 0, hesitate = 0, wrong = 0;
+    modQs.forEach(q => {
+      const s = getQStatus(q.id);
+      if (s === 'correct') correct++;
+      else if (s === 'hesitate') hesitate++;
+      else if (s === 'wrong') wrong++;
+    });
+    const done = correct + hesitate + wrong;
+    const mastery = total > 0 ? Math.round(correct / total * 100) : 0;
+
+    statsHtml += `<div class="stat-module">`;
+    statsHtml += `<h3 style="color:${mod.color};">${mod.name} <small style="color:var(--text2);">（考试占比 ~${mod.examPct}%）</small></h3>`;
+    statsHtml += `<div class="stat-row"><span>总题数</span><span>${total}</span></div>`;
+    statsHtml += `<div class="stat-row"><span>已完成</span><span>${done}</span><div class="stat-bar-wrap"><div class="stat-bar-fill" style="width:${total>0?Math.round(done/total*100):0}%;background:var(--blue);"></div></div></div>`;
+    statsHtml += `<div class="stat-row"><span>✅ 掌握</span><span>${correct}</span><div class="stat-bar-wrap"><div class="stat-bar-fill" style="width:${total>0?Math.round(correct/total*100):0}%;background:var(--green);"></div></div></div>`;
+    statsHtml += `<div class="stat-row"><span>掌握率</span><span><b>${mastery}%</b></span></div>`;
+    statsHtml += `</div>`;
+  });
+
+  document.getElementById('statsGrid').innerHTML = statsHtml;
+
+  // 模块掌握率
+  let masteryHtml = '';
+  modules.forEach(mod => {
+    const modQs = QUESTION_BANK.filter(q => q.module === mod.key);
+    const total = modQs.length;
+    const correct = modQs.filter(q => getQStatus(q.id) === 'correct').length;
+    const done = modQs.filter(q => ['correct','hesitate','wrong'].includes(getQStatus(q.id)||'')).length;
+    const pct = total > 0 ? Math.round(correct / total * 100) : 0;
+    const donePct = total > 0 ? Math.round(done / total * 100) : 0;
+
+    masteryHtml += `<div style="margin-bottom:14px;">`;
+    masteryHtml += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>${mod.name}</span><span style="color:${mod.color};">${pct}%（完成 ${donePct}%）</span></div>`;
+    masteryHtml += `<div style="height:10px;background:var(--bg);border-radius:5px;overflow:hidden;">`;
+    masteryHtml += `<div style="height:100%;width:${pct}%;background:${mod.color};border-radius:5px;transition:width 0.5s;"></div>`;
+    masteryHtml += `</div></div>`;
+  });
+  document.getElementById('moduleMastery').innerHTML = masteryHtml;
+
+  // 薄弱环节
+  const weakChapters = {};
+  QUESTION_BANK.forEach(q => {
+    const s = getQStatus(q.id);
+    if (s === 'wrong' || s === 'hesitate') {
+      const key = `${q.subject} - ${q.chapter}`;
+      weakChapters[key] = (weakChapters[key] || 0) + 1;
+    }
+  });
+  const sorted = Object.entries(weakChapters).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+  let weakHtml = '';
+  if (sorted.length === 0) {
+    weakHtml = '<p style="color:var(--text2);">暂无数据，开始练习后自动分析薄弱环节。</p>';
+  } else {
+    sorted.forEach(([key, count]) => {
+      const pct = Math.min(100, count * 5);
+      weakHtml += `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">`;
+      weakHtml += `<span style="flex:1;font-size:0.85em;">${key}</span>`;
+      weakHtml += `<span style="color:var(--red);font-weight:bold;">${count}题</span>`;
+      weakHtml += `<div style="width:100px;height:6px;background:var(--bg);border-radius:3px;"><div style="height:100%;width:${pct}%;background:var(--red);border-radius:3px;"></div></div>`;
+      weakHtml += `</div>`;
+    });
+  }
+  document.getElementById('weakAreas').innerHTML = weakHtml;
+}
+
+// ===== 面板切换 =====
+function switchPanel(panel) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+
+  const panelEl = document.getElementById(`panel-${panel}`);
+  if (panelEl) panelEl.classList.add('active');
+  const navBtn = document.getElementById(`nav-${panel}`);
+  if (navBtn) navBtn.classList.add('active');
+
+  if (panel === 'errors') renderErrorBook();
+  if (panel === 'stats') renderStats();
+  if (panel === 'practice') updateProgressBar();
+  if (panel === 'admin') {
+    document.getElementById('adminNewTitle').value = getSystemTitle();
+    renderAdminUserTable();
+    renderBookAdminTable();
+  }
+  if (panel === 'textbooks') renderBookGrid();
+}
+
+// ===== 导出/重置 =====
+function exportErrors() {
+  const errors = Object.values(appState.errors);
+  if (errors.length === 0) { alert('错题本为空，无需导出。'); return; }
+  let text = '# 拍卖师考试 · 错题本导出\n\n';
+  text += `导出时间：${new Date().toLocaleString('zh-CN')}\n\n`;
+  errors.forEach((e, i) => {
+    text += `## ${i+1}. ${e.title}\n`;
+    text += `- 科目：${e.subject}\n- 章节：${e.chapter}\n- 题型：${e.type}\n- 根因：${e.rootCause}\n- 修正笔记：${e.note}\n- 关联页：${e.relatedPage}\n\n`;
+  });
+  const blob = new Blob([text], { type: 'text/markdown' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `拍卖师错题本_${new Date().toISOString().slice(0,10)}.md`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
+function clearAllErrors() {
+  if (confirm('确定要清空所有错题记录吗？此操作不可恢复！')) {
+    appState.errors = {};
+    saveState();
+    renderErrorBook();
+    updateProgressBar();
+  }
+}
+
+function resetAllProgress() {
+  if (confirm('确定要重置所有学习进度吗？（错题本将被保留，选项顺序将重新随机排列）')) {
+    appState.progress = {};
+    shuffleMap = {};
+    shuffleReverse = {};
+    saveState();
+    applyFilters();
+    alert('✅ 进度已重置，选项顺序已重新洗牌');
+  }
+}
+
+// ===== 工具函数 =====
+function arraysEqual(a, b) {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+// ===== 初始化 =====
+function init() {
+  applyFilters();
+  getSystemTitle().then(t => updateAllTitles(t));
+}
+
+// 页面初始加载：先尝试恢复登录，再更新标题
+getSystemTitle().then(t => updateAllTitles(t));
+tryAutoLogin().then(function() {
+  // auto-login 成功则 tryAutoLogin 内部已调 init()
+  // 失败则正常显示登录页
+});
+</script>
+<!-- v1780758753 -->
+</body>
+</html>
