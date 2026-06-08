@@ -1,4 +1,6 @@
-with open('/opt/auctioneer/static/index.html', 'r') as f:
+import os
+base = os.path.dirname(os.path.abspath(__file__))
+with open(os.path.join(base, 'static', 'index.html'), 'r', encoding='utf-8') as f:
     html = f.read()
 import re
 m = re.search(r'<script>(.*?)</script>', html, re.DOTALL)

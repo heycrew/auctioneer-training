@@ -381,10 +381,6 @@ main { max-width:1100px; margin:0 auto; padding:20px 16px 40px; }
       <option value="法律">拍卖法律教程</option>
       <option value="实务">拍卖实务</option>
     </select>
-    <label>章节：</label>
-    <select id="filterChapter" onchange="applyFilters()">
-      <option value="all">全部章节</option>
-    </select>
     <label>题型：</label>
     <div class="btn-group" id="filterType">
       <button class="btn-sm on" data-type="all" onclick="toggleTypeFilter(this)">全部</button>
@@ -1467,8 +1463,6 @@ async function loadStateFromServer() {
   }
 }
 
-function loadState() { return { errors: {}, progress: {}, reviewSessions: [] }; }
-
 async function saveState() {
   if (!authToken) return;
   // 只同步有变化的 progress 和 errors
@@ -1479,25 +1473,6 @@ async function saveState() {
   if (Object.keys(progressToSync).length > 0) {
     try { await api('/api/progress', { method: 'PUT', body: JSON.stringify({ progress: progressToSync }) }); } catch(e) {}
   }
-}
-
-function setQStatus(qid, status) {
-  if (!appState.progress[qid]) appState.progress[qid] = {};
-  appState.progress[qid].status = status;
-  appState.progress[qid].time = Date.now();
-  appState.progress[qid]._dirty = true;
-  saveState();
-}
-
-function saveErrorEntry(qid, entry) {
-  appState.errors[qid] = { ...entry, savedAt: Date.now() };
-  // 异步同步到服务端
-  api('/api/errors', { method: 'PUT', body: JSON.stringify({ errors: { [qid]: entry } }) }).catch(() => {});
-}
-
-function removeErrorEntry(qid) {
-  delete appState.errors[qid];
-  api('/api/errors/' + encodeURIComponent(qid), { method: 'DELETE' }).catch(() => {});
 }
 
 // ===== 管理员功能 =====
@@ -1756,6 +1731,7 @@ function setQStatus(qid, status) {
   if (!appState.progress[qid]) appState.progress[qid] = {};
   appState.progress[qid].status = status;
   appState.progress[qid].time = Date.now();
+  appState.progress[qid]._dirty = true;
   saveState();
 }
 
@@ -1766,12 +1742,14 @@ function getErrorEntry(qid) {
 
 function saveErrorEntry(qid, entry) {
   appState.errors[qid] = { ...entry, savedAt: Date.now() };
-  saveState();
+  // 异步同步到服务端
+  api('/api/errors', { method: 'PUT', body: JSON.stringify({ errors: { [qid]: entry } }) }).catch(() => {});
 }
 
 function removeErrorEntry(qid) {
   delete appState.errors[qid];
-  saveState();
+  // 异步同步到服务端
+  api('/api/errors/' + encodeURIComponent(qid), { method: 'DELETE' }).catch(() => {});
 }
 
 // ===== 筛选逻辑 =====
@@ -1781,10 +1759,6 @@ function getFilteredQuestions() {
   // 科目
   const subj = document.getElementById('filterSubject').value;
   if (subj !== 'all') qs = qs.filter(q => q.subject === subj);
-
-  // 章节
-  const chap = document.getElementById('filterChapter').value;
-  if (chap !== 'all') qs = qs.filter(q => q.chapter === chap);
 
   // 题型
   if (!typeFilters.includes('all')) {
@@ -1804,25 +1778,6 @@ function getFilteredQuestions() {
 }
 
 function applyFilters() {
-  // 更新章节下拉
-  const subj = document.getElementById('filterSubject').value;
-  const chapSelect = document.getElementById('filterChapter');
-  const currentChap = chapSelect.value;
-  const chapters = [...new Set(QUESTION_BANK.filter(q => subj === 'all' || q.subject === subj).map(q => q.chapter))].sort();
-  chapSelect.innerHTML = '<option value="all">全部章节</option>';
-  chapters.forEach(ch => {
-    const opt = document.createElement('option');
-    opt.value = ch;
-    opt.textContent = ch;
-    chapSelect.appendChild(opt);
-  });
-  // 科目变化后，检查当前选中章节是否仍存在，不存在则重置为"全部章节"
-  if (currentChap !== 'all' && !chapters.includes(currentChap)) {
-    chapSelect.value = 'all';
-  } else {
-    chapSelect.value = currentChap;
-  }
-
   currentQuestions = getFilteredQuestions();
   currentPage = 0;
   renderQuestions();
