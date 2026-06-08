@@ -1807,15 +1807,21 @@ function applyFilters() {
   // 更新章节下拉
   const subj = document.getElementById('filterSubject').value;
   const chapSelect = document.getElementById('filterChapter');
+  const currentChap = chapSelect.value;
   const chapters = [...new Set(QUESTION_BANK.filter(q => subj === 'all' || q.subject === subj).map(q => q.chapter))].sort();
   chapSelect.innerHTML = '<option value="all">全部章节</option>';
-  const prefix = subj === '概论' ? '' : (subj === '法律' ? '' : '');
   chapters.forEach(ch => {
     const opt = document.createElement('option');
     opt.value = ch;
     opt.textContent = ch;
     chapSelect.appendChild(opt);
   });
+  // 科目变化后，检查当前选中章节是否仍存在，不存在则重置为"全部章节"
+  if (currentChap !== 'all' && !chapters.includes(currentChap)) {
+    chapSelect.value = 'all';
+  } else {
+    chapSelect.value = currentChap;
+  }
 
   currentQuestions = getFilteredQuestions();
   currentPage = 0;
