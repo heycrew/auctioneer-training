@@ -380,10 +380,6 @@ main { max-width:1100px; margin:0 auto; padding:20px 16px 40px; }
       <option value="法律">拍卖法律教程</option>
       <option value="实务">拍卖实务</option>
     </select>
-    <label>章节：</label>
-    <select id="filterChapter" onchange="applyFilters()">
-      <option value="all">全部章节</option>
-    </select>
     <label>题型：</label>
     <div class="btn-group" id="filterType">
       <button class="btn-sm on" data-type="all" onclick="toggleTypeFilter(this)">全部</button>
@@ -1856,10 +1852,6 @@ function getFilteredQuestions() {
   const subj = document.getElementById('filterSubject').value;
   if (subj !== 'all') qs = qs.filter(q => q.subject === subj);
 
-  // 章节
-  const chap = document.getElementById('filterChapter').value;
-  if (chap !== 'all') qs = qs.filter(q => q.chapter === chap);
-
   // 题型
   if (!typeFilters.includes('all')) {
     qs = qs.filter(q => {
@@ -1878,19 +1870,6 @@ function getFilteredQuestions() {
 }
 
 function applyFilters() {
-  // 更新章节下拉
-  const subj = document.getElementById('filterSubject').value;
-  const chapSelect = document.getElementById('filterChapter');
-  const chapters = [...new Set(QUESTION_BANK.filter(q => subj === 'all' || q.subject === subj).map(q => q.chapter))].sort();
-  chapSelect.innerHTML = '<option value="all">全部章节</option>';
-  const prefix = subj === '概论' ? '' : (subj === '法律' ? '' : '');
-  chapters.forEach(ch => {
-    const opt = document.createElement('option');
-    opt.value = ch;
-    opt.textContent = ch;
-    chapSelect.appendChild(opt);
-  });
-
   currentQuestions = getFilteredQuestions();
   currentPage = 0;
   renderQuestions();
