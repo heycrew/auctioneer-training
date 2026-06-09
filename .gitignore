@@ -37,3 +37,8 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Dev utilities (not for deployment)
+update_vault_qa.py
+extract_textbook_qa.py
+gen_gailun.py
