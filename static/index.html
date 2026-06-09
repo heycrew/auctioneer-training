@@ -1623,8 +1623,8 @@ async function uploadBook() {
   if (!['pdf','doc','docx','jpg','jpeg','png'].includes(ext)) {
     msgEl.innerHTML = '<span style="color:var(--red);">⚠️ 不支持的格式</span>'; return;
   }
-  if (file.size > 10 * 1024 * 1024) {
-    msgEl.innerHTML = '<span style="color:var(--red);">⚠️ 文件过大（最大10MB）</span>'; return;
+  if (file.size > 50 * 1024 * 1024) {
+    msgEl.innerHTML = '<span style="color:var(--red);">⚠️ 文件过大（最大50MB）</span>'; return;
   }
   msgEl.innerHTML = '<span style="color:var(--accent2);">⏳ 正在上传...</span>';
   try {

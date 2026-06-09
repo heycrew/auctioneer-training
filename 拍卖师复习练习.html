@@ -1597,7 +1597,7 @@ function saveBooks(books) {
     localStorage.setItem(BOOKS_KEY, JSON.stringify(books));
   } catch(e) {
     if (e.name === 'QuotaExceededError' || e.toString().indexOf('quota') > -1) {
-      alert('⚠️ 存储空间已满！请先删除一些旧教材再上传。\n\n浏览器 localStorage 通常限制 5-10MB，教材文件经过 base64 编码后会增大约 33%。');
+      alert('⚠️ 存储空间已满！请先删除一些旧教材再上传。\n\n浏览器 localStorage 有容量限制。建议使用服务端模式上传大文件（最大50MB），避免 base64 编码膨胀。');
     }
     throw e;
   }
@@ -1701,8 +1701,8 @@ function uploadBook() {
     return;
   }
 
-  if (file.size > 10 * 1024 * 1024) {
-    msgEl.innerHTML = '<span style="color:var(--red);">⚠️ 文件过大（最大10MB），请压缩后上传</span>';
+  if (file.size > 50 * 1024 * 1024) {
+    msgEl.innerHTML = '<span style="color:var(--red);">⚠️ 文件过大（最大50MB），请压缩后上传</span>';
     return;
   }
 
