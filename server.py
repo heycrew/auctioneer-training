@@ -500,7 +500,9 @@ def index():
 # 启动
 # ============================================================
 if __name__ == '__main__':
+    import io, sys
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
     init_db()
-    print("✅ 数据库初始化完成")
-    print("📚 威拍拍卖师秘籍服务端启动...")
+    print("数据库初始化完成")
+    print("威拍拍卖师秘籍服务端启动...")
     app.run(host='0.0.0.0', port=5000, debug=False)
