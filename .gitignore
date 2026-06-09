@@ -42,3 +42,10 @@ Thumbs.db
 update_vault_qa.py
 extract_textbook_qa.py
 gen_gailun.py
+add_citations.py
+add_citations_v2.py
+fix_page_numbers.py
+full_verify.py
+sync_to_server_html.py
+verify_all_answers.py
+答案复核报告.md
