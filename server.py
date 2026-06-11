@@ -486,9 +486,12 @@ def api_update_config():
 # ============================================================
 @app.after_request
 def add_header(response):
-    # 教材文件请求不添加禁用缓存头，否则 Chrome PDF 查看器无法加载
+    # 教材文件请求：添加安全头但不影响预览
     if '/api/books/' in request.path and '/download' in request.path:
-        response.headers['Cache-Control'] = 'public, max-age=3600'
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
         return response
     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     response.headers['Pragma'] = 'no-cache'
