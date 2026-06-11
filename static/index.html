@@ -335,6 +335,7 @@ main { max-width:1100px; margin:0 auto; padding:20px 16px 40px; }
 .pdf-guard-wrapper iframe { position:relative; z-index:1; width:100%; height:100%; border:none; background:#fff; border-radius:8px; }
 .pdf-guard-overlay {
   position:absolute; inset:0; z-index:2; background:transparent;
+  pointer-events:none; /* 放行滚轮和点击到iframe */
 }
 .viewer-body img { max-width:100%; max-height:100%; object-fit:contain; border-radius:8px; }
 .viewer-body .viewer-unsupported { text-align:center; color:var(--text2); }
@@ -1616,6 +1617,13 @@ function formatSize(bytes) {
 let currentBlobUrl = null;
 let currentAbortController = null;
 
+// 🔒 查看器打开时全局拦截右键（Chrome PDF查看器内部右键无法通过DOM事件穿透捕获）
+function blockContextMenu(e) {
+  if (document.getElementById('viewerOverlay').style.display === 'flex') {
+    e.preventDefault(); e.stopPropagation(); return false;
+  }
+}
+
 function openViewer(bookId) {
   if (!authToken) return;
   // 🔧 取消上一个未完成的加载，防止多个进度条并发
@@ -1637,6 +1645,8 @@ function openViewer(bookId) {
 
     body.innerHTML = '<div class="viewer-progress"><div class="viewer-progress-bar"><div class="viewer-progress-fill" id="viewerProgressFill"></div></div><div class="viewer-progress-text" id="viewerProgressText">正在连接…</div></div>';
     document.getElementById('viewerOverlay').style.display = 'flex';
+    // 🔒 查看器打开时，全局拦截右键（捕获阶段，早于任何元素处理）
+    document.addEventListener('contextmenu', blockContextMenu, true);
 
     fetch(loadUrl, {
       headers: { 'Authorization': 'Bearer ' + authToken },
@@ -1698,6 +1708,8 @@ function closeViewer() {
   document.getElementById('viewerOverlay').style.display = 'none';
   document.getElementById('viewerBody').innerHTML = '';
   if (currentBlobUrl) { URL.revokeObjectURL(currentBlobUrl); currentBlobUrl = null; }
+  // 🔒 恢复右键
+  document.removeEventListener('contextmenu', blockContextMenu, true);
 }
 
 // 🔒 downloadBook 已移除（不再提供下载功能）
