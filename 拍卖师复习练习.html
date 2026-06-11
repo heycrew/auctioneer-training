@@ -329,7 +329,7 @@ main { max-width:1100px; margin:0 auto; padding:20px 16px 40px; }
 }
 .pdf-guard-wrapper { position:relative; width:100%; height:100%; }
 .pdf-guard-wrapper iframe { position:relative; z-index:1; width:100%; height:100%; border:none; background:#fff; border-radius:8px; }
-.pdf-guard-overlay { position:absolute; inset:0; z-index:2; background:transparent; pointer-events:none; }
+.pdf-guard-overlay { position:absolute; inset:0; z-index:2; background:transparent; }
 .viewer-body img { max-width:100%; max-height:100%; object-fit:contain; border-radius:8px; }
 .viewer-body .viewer-unsupported { text-align:center; color:var(--text2); }
 .viewer-body .viewer-unsupported button {
@@ -486,7 +486,7 @@ main { max-width:1100px; margin:0 auto; padding:20px 16px 40px; }
   <div class="viewer-watermark" id="viewerWatermark"></div>
   <div class="viewer-toolbar">
     <span id="viewerTitle">教材查看</span>
-    <span style="color:var(--text2);font-size:0.75em;margin:0 12px;">🔒 内容已保护 · ↑↓ PgUp PgDn 浏览</span>
+    <span style="color:var(--text2);font-size:0.75em;margin:0 12px;">🔒 内容已保护</span>
     <button onclick="closeViewer()">✕ 关闭</button>
   </div>
   <div class="viewer-body" id="viewerBody" oncontextmenu="return false;"></div>
@@ -1665,12 +1665,6 @@ function formatSize(bytes) {
 let currentBlobUrl = null;
 let currentAbortController = null;
 
-function blockContextMenu(e) {
-  if (document.getElementById('viewerOverlay').style.display === 'flex') {
-    e.preventDefault(); e.stopPropagation(); return false;
-  }
-}
-
 function openViewer(bookId) {
   const books = loadBooks();
   const book = books.find(b => b.id === bookId);
@@ -1691,7 +1685,6 @@ function openViewer(bookId) {
 
   body.innerHTML = '<div class="viewer-progress"><div class="viewer-progress-bar"><div class="viewer-progress-fill" id="viewerProgressFill"></div></div><div class="viewer-progress-text" id="viewerProgressText">正在加载…</div></div>';
   document.getElementById('viewerOverlay').style.display = 'flex';
-  document.addEventListener('contextmenu', blockContextMenu, true);
 
   fetch(book.data, { signal: controller.signal }).then(r => {
     const reader = r.body.getReader();
@@ -1717,7 +1710,15 @@ function openViewer(bookId) {
     if (ext === 'pdf') {
       body.innerHTML = '<div class="pdf-guard-wrapper" id="pdfGuard">' +
         '<iframe src="' + currentBlobUrl + '#toolbar=0&navpanes=0&scrollbar=1&statusbar=0"></iframe>' +
-        '<div class="pdf-guard-overlay" oncontextmenu="return false;"></div></div>';
+        '<div class="pdf-guard-overlay" id="pdfGuardOverlay"></div></div>';
+      var ov = document.getElementById('pdfGuardOverlay');
+      if (ov) {
+        ov.addEventListener('contextmenu', function(e){ e.preventDefault(); return false; });
+        ov.addEventListener('wheel', function(e){
+          ov.style.pointerEvents = 'none';
+          requestAnimationFrame(function(){ ov.style.pointerEvents = 'auto'; });
+        }, {passive: true});
+      }
     } else if (ext === 'jpg' || ext === 'jpeg' || ext === 'png') {
       body.innerHTML = '<img src="' + currentBlobUrl + '" alt="' + escHtml(book.name) + '" style="pointer-events:none;max-width:100%;max-height:100%;object-fit:contain;" draggable="false">';
     } else {
@@ -1734,7 +1735,6 @@ function closeViewer() {
   document.getElementById('viewerOverlay').style.display = 'none';
   document.getElementById('viewerBody').innerHTML = '';
   if (currentBlobUrl) { URL.revokeObjectURL(currentBlobUrl); currentBlobUrl = null; }
-  document.removeEventListener('contextmenu', blockContextMenu, true);
 }
 
 // 🔒 downloadBook 已删除 — 不再提供下载功能

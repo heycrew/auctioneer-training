@@ -34,7 +34,8 @@ def init_db():
             username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
             is_admin INTEGER DEFAULT 0,
-            created_at INTEGER NOT NULL
+            created_at INTEGER NOT NULL,
+            session_token TEXT DEFAULT ''
         );
         CREATE TABLE IF NOT EXISTS progress (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -74,6 +75,11 @@ def init_db():
             value TEXT NOT NULL
         );
     ''')
+    # 迁移：为已有数据库添加 session_token 列
+    try:
+        db.execute("ALTER TABLE users ADD COLUMN session_token TEXT DEFAULT ''")
+    except:
+        pass
     # 默认管理员
     admin = db.execute("SELECT * FROM users WHERE username='admin'").fetchone()
     if not admin:
@@ -102,10 +108,10 @@ def verify_password(password, stored):
     return hmac.compare_digest(key, new_key)
 
 # ============================================================
-# JWT (simple)
+# JWT (simple) + 单设备登录
 # ============================================================
-def make_token(user_id, username, is_admin):
-    payload = json.dumps({'uid': user_id, 'un': username, 'ia': is_admin, 'exp': int(time.time()) + 86400 * 7})
+def make_token(user_id, username, is_admin, session_token=''):
+    payload = json.dumps({'uid': user_id, 'un': username, 'ia': is_admin, 'st': session_token, 'exp': int(time.time()) + 86400 * 7})
     sig = hmac.new(app.config['SECRET_KEY'].encode(), payload.encode(), 'sha256').hexdigest()
     return base64.b64encode((payload + '.' + sig).encode()).decode()
 
@@ -133,6 +139,14 @@ def require_auth(f):
         user = parse_token(token)
         if not user:
             return jsonify({'error': '未登录或登录已过期'}), 401
+        # 🔒 单设备登录：验证session_token，另一设备登录后旧token失效
+        st = user.get('st', '')
+        if st:
+            db = get_db()
+            row = db.execute("SELECT session_token FROM users WHERE id=?", (user['uid'],)).fetchone()
+            db.close()
+            if not row or row['session_token'] != st:
+                return jsonify({'error': '账号已在其他设备登录，请重新登录'}), 401
         g.user = user
         return f(*args, **kwargs)
     return decorated
@@ -161,11 +175,17 @@ def api_login():
 
     db = get_db()
     user = db.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
-    db.close()
     if not user or not verify_password(password, user['password_hash']):
+        db.close()
         return jsonify({'error': '账号或密码错误'}), 401
 
-    token = make_token(user['id'], user['username'], bool(user['is_admin']))
+    # 🔒 单设备登录：生成新session_token，旧token自动失效
+    session_token = str(uuid.uuid4())
+    db.execute("UPDATE users SET session_token=? WHERE id=?", (session_token, user['id']))
+    db.commit()
+    db.close()
+
+    token = make_token(user['id'], user['username'], bool(user['is_admin']), session_token)
     return jsonify({
         'token': token,
         'username': user['username'],
