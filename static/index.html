@@ -344,6 +344,19 @@ main { max-width:1100px; margin:0 auto; padding:20px 16px 40px; }
   opacity:0.03; font-size:4em; color:#fff; white-space:nowrap;
   transform:rotate(-25deg); letter-spacing:0.3em;
 }
+/* 📊 加载进度条 */
+.viewer-progress {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:16px; color:var(--text); padding:40px;
+}
+.viewer-progress-bar {
+  width:300px; height:8px; background:var(--border); border-radius:4px; overflow:hidden;
+}
+.viewer-progress-fill {
+  height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2));
+  border-radius:4px; transition:width 0.3s ease; width:0%;
+}
+.viewer-progress-text { font-size:0.9em; color:var(--text2); }
 </style>
 </head>
 <body>
@@ -1606,41 +1619,67 @@ function openViewer(bookId) {
     document.getElementById('viewerWatermark').textContent = book.name;
     const body = document.getElementById('viewerBody');
     const ext = (book.type || '').toLowerCase();
-
-    // 🔒 通过 fetch + Authorization header 获取文件（token 不出现在 URL 中）
     const loadUrl = API_BASE + '/api/books/' + bookId + '/download';
-    body.innerHTML = '<div style="color:var(--text2);text-align:center;padding:60px;"><p style="font-size:2em;">⏳</p><p>正在加载教材…</p></div>';
+    const fileSize = book.size || 0;
+
+    // 📊 显示进度条
+    body.innerHTML = '<div class="viewer-progress"><div class="viewer-progress-bar"><div class="viewer-progress-fill" id="viewerProgressFill"></div></div><div class="viewer-progress-text" id="viewerProgressText">正在连接…</div></div>';
     document.getElementById('viewerOverlay').style.display = 'flex';
 
-    if (ext === 'pdf') {
-      fetch(loadUrl, { headers: { 'Authorization': 'Bearer ' + authToken } })
-        .then(r => { if (!r.ok) throw new Error('加载失败'); return r.blob(); })
-        .then(blob => {
-          if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
-          currentBlobUrl = URL.createObjectURL(blob);
-          // 🔒 使用 sandbox iframe 并禁用工具栏和下载
-          body.innerHTML = '<iframe src="' + currentBlobUrl + '#toolbar=0&navpanes=0&scrollbar=1" sandbox="allow-scripts allow-same-origin"></iframe>';
-        })
-        .catch(e => { body.innerHTML = '<div style="color:var(--red);text-align:center;padding:60px;"><p>❌ 加载失败</p><p style="font-size:0.85em;">' + e.message + '</p></div>'; });
-    } else if (ext === 'jpg' || ext === 'jpeg' || ext === 'png') {
-      fetch(loadUrl, { headers: { 'Authorization': 'Bearer ' + authToken } })
-        .then(r => { if (!r.ok) throw new Error('加载失败'); return r.blob(); })
-        .then(blob => {
-          if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
-          currentBlobUrl = URL.createObjectURL(blob);
-          body.innerHTML = '<img src="' + currentBlobUrl + '" alt="' + escHtml(book.name) + '" style="pointer-events:none;" draggable="false">';
-        })
-        .catch(e => { body.innerHTML = '<div style="color:var(--red);text-align:center;padding:60px;"><p>❌ 加载失败</p></div>'; });
-    } else {
-      body.innerHTML = '<div class="viewer-unsupported"><p>📝 此格式不支持在线预览</p></div>';
-    }
+    // 🔒 带进度条的 fetch
+    fetch(loadUrl, { headers: { 'Authorization': 'Bearer ' + authToken } })
+      .then(r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const reader = r.body.getReader();
+        const contentLength = parseInt(r.headers.get('Content-Length') || fileSize || 0);
+        let received = 0;
+        const chunks = [];
+
+        function pump() {
+          return reader.read().then(({ done, value }) => {
+            if (done) {
+              const blob = new Blob(chunks, { type: r.headers.get('Content-Type') || 'application/pdf' });
+              return blob;
+            }
+            chunks.push(value);
+            received += value.length;
+            // 更新进度条
+            const pct = contentLength > 0 ? Math.round(received / contentLength * 100) : 0;
+            const fill = document.getElementById('viewerProgressFill');
+            const text = document.getElementById('viewerProgressText');
+            if (fill) fill.style.width = pct + '%';
+            if (text) {
+              const rMB = (received / 1048576).toFixed(1);
+              const tMB = contentLength > 0 ? (contentLength / 1048576).toFixed(1) : '?';
+              text.textContent = pct + '% — ' + rMB + 'MB / ' + tMB + 'MB';
+            }
+            return pump();
+          });
+        }
+        return pump();
+      })
+      .then(blob => {
+        if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
+        currentBlobUrl = URL.createObjectURL(blob);
+
+        if (ext === 'pdf') {
+          // 🔒 不使用 sandbox（Chrome会拦截），直接用blob URL + PDF查看器参数
+          body.innerHTML = '<iframe src="' + currentBlobUrl + '#toolbar=0&navpanes=0&scrollbar=1" style="width:100%;height:100%;border:none;background:#fff;border-radius:8px;"></iframe>';
+        } else if (ext === 'jpg' || ext === 'jpeg' || ext === 'png') {
+          body.innerHTML = '<img src="' + currentBlobUrl + '" alt="' + escHtml(book.name) + '" style="pointer-events:none;max-width:100%;max-height:100%;object-fit:contain;" draggable="false">';
+        } else {
+          body.innerHTML = '<div class="viewer-unsupported"><p>📝 此格式不支持在线预览</p></div>';
+        }
+      })
+      .catch(e => {
+        body.innerHTML = '<div style="color:var(--red);text-align:center;padding:60px;"><p>❌ 加载失败</p><p style="font-size:0.85em;">' + e.message + '</p></div>';
+      });
   });
 }
 
 function closeViewer() {
   document.getElementById('viewerOverlay').style.display = 'none';
   document.getElementById('viewerBody').innerHTML = '';
-  // 🔒 立即释放 Blob URL，防止内存中残留
   if (currentBlobUrl) { URL.revokeObjectURL(currentBlobUrl); currentBlobUrl = null; }
 }
 

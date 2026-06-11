@@ -340,6 +340,18 @@ main { max-width:1100px; margin:0 auto; padding:20px 16px 40px; }
   opacity:0.03; font-size:4em; color:#fff; white-space:nowrap;
   transform:rotate(-25deg); letter-spacing:0.3em;
 }
+.viewer-progress {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:16px; color:var(--text); padding:40px;
+}
+.viewer-progress-bar {
+  width:300px; height:8px; background:var(--border); border-radius:4px; overflow:hidden;
+}
+.viewer-progress-fill {
+  height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2));
+  border-radius:4px; transition:width 0.3s ease; width:0%;
+}
+.viewer-progress-text { font-size:0.9em; color:var(--text2); }
 </style>
 </head>
 <body>
@@ -1659,27 +1671,41 @@ function openViewer(bookId) {
   document.getElementById('viewerWatermark').textContent = book.name;
   const body = document.getElementById('viewerBody');
   const ext = (book.type || '').toLowerCase();
-  body.innerHTML = '<div style="color:var(--text2);text-align:center;padding:60px;"><p style="font-size:2em;">⏳</p><p>正在加载…</p></div>';
+  const fileSize = book.size || 0;
+
+  body.innerHTML = '<div class="viewer-progress"><div class="viewer-progress-bar"><div class="viewer-progress-fill" id="viewerProgressFill"></div></div><div class="viewer-progress-text" id="viewerProgressText">正在加载…</div></div>';
   document.getElementById('viewerOverlay').style.display = 'flex';
 
-  if (ext === 'pdf') {
-    // 🔒 通过 fetch 获取 data URI 的 Blob，避免 data URI 暴露在 DOM 中
-    fetch(book.data).then(r => r.blob()).then(blob => {
-      if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
-      currentBlobUrl = URL.createObjectURL(blob);
-      body.innerHTML = '<iframe src="' + currentBlobUrl + '#toolbar=0&navpanes=0&scrollbar=1" sandbox="allow-scripts allow-same-origin"></iframe>';
-    }).catch(() => {
-      body.innerHTML = '<div style="color:var(--red);text-align:center;padding:60px;"><p>❌ 加载失败</p></div>';
-    });
-  } else if (ext === 'jpg' || ext === 'jpeg' || ext === 'png') {
-    fetch(book.data).then(r => r.blob()).then(blob => {
-      if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
-      currentBlobUrl = URL.createObjectURL(blob);
-      body.innerHTML = '<img src="' + currentBlobUrl + '" alt="' + escHtml(book.name) + '" style="pointer-events:none;" draggable="false">';
-    });
-  } else {
-    body.innerHTML = '<div class="viewer-unsupported"><p>📁 此格式不支持在线预览</p></div>';
-  }
+  fetch(book.data).then(r => {
+    const reader = r.body.getReader();
+    const contentLength = parseInt(r.headers.get('Content-Length') || fileSize || 0);
+    let received = 0; const chunks = [];
+    function pump() {
+      return reader.read().then(({ done, value }) => {
+        if (done) return new Blob(chunks, { type: r.headers.get('Content-Type') || 'application/pdf' });
+        chunks.push(value); received += value.length;
+        const pct = contentLength > 0 ? Math.round(received / contentLength * 100) : 0;
+        const fill = document.getElementById('viewerProgressFill');
+        const text = document.getElementById('viewerProgressText');
+        if (fill) fill.style.width = pct + '%';
+        if (text) text.textContent = pct + '% — ' + (received/1048576).toFixed(1) + 'MB / ' + (contentLength/1048576).toFixed(1) + 'MB';
+        return pump();
+      });
+    }
+    return pump();
+  }).then(blob => {
+    if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
+    currentBlobUrl = URL.createObjectURL(blob);
+    if (ext === 'pdf') {
+      body.innerHTML = '<iframe src="' + currentBlobUrl + '#toolbar=0&navpanes=0&scrollbar=1" style="width:100%;height:100%;border:none;background:#fff;border-radius:8px;"></iframe>';
+    } else if (ext === 'jpg' || ext === 'jpeg' || ext === 'png') {
+      body.innerHTML = '<img src="' + currentBlobUrl + '" alt="' + escHtml(book.name) + '" style="pointer-events:none;max-width:100%;max-height:100%;object-fit:contain;" draggable="false">';
+    } else {
+      body.innerHTML = '<div class="viewer-unsupported"><p>📁 此格式不支持在线预览</p></div>';
+    }
+  }).catch(() => {
+    body.innerHTML = '<div style="color:var(--red);text-align:center;padding:60px;"><p>❌ 加载失败</p></div>';
+  });
 }
 
 function closeViewer() {

@@ -303,16 +303,15 @@ def api_download_book(book_id):
         'doc': 'application/msword', 'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     }
     mimetype = mime_map.get(book['type'], 'application/octet-stream')
-    response = send_file(filepath, mimetype=mimetype)
-    # 强制 inline 显示（不允许浏览器触发下载），RFC 5987 编码处理中文文件名
+    # 🔒 用条件请求支持浏览器缓存（ETag基于文件修改时间），减少重复加载
+    response = send_file(filepath, mimetype=mimetype, conditional=True)
+    # 强制 inline 显示，RFC 5987 编码处理中文文件名
     from urllib.parse import quote
     safe_name = quote(book['name'])
     response.headers['Content-Disposition'] = 'inline; filename*=UTF-8\'\'%s' % safe_name
-    # 🔒 安全头：禁止浏览器嗅探MIME、禁止iframe嵌套外部、禁用缓存
-    response.headers['X-Content-Type-Options'] = 'nosniff'
-    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
+    # 🔒 安全头：允许浏览器缓存PDF以加速加载（Blob URL是一次性的不会泄露）
+    # 注意：不能使用 nosniff，否则 Chrome 内置 PDF 查看器会拦截（ERR_BLOCKED_BY_RESPONSE）
+    response.headers['Cache-Control'] = 'private, max-age=300'
     return response
 
 @app.route('/api/books/upload', methods=['POST'])
@@ -486,12 +485,8 @@ def api_update_config():
 # ============================================================
 @app.after_request
 def add_header(response):
-    # 教材文件请求：添加安全头但不影响预览
+    # 教材文件请求：放行（安全头由 api_download_book 单独设置）
     if '/api/books/' in request.path and '/download' in request.path:
-        response.headers['X-Content-Type-Options'] = 'nosniff'
-        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Expires'] = '0'
         return response
     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     response.headers['Pragma'] = 'no-cache'
