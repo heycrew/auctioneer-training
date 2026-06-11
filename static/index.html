@@ -2031,7 +2031,7 @@ function renderQuestions() {
     html += `<span class="q-badge type">${typeName}</span>`;
     if (q.isStar) html += `<span class="q-badge star">⭐ 重点</span>`;
     html += `</div>`;
-    html += `<span class="q-number">#${globalIdx} / ${currentQuestions.length}</span>`;
+    html += `<span class="q-number">#${globalIdx} / ${QUESTION_BANK.length}</span>`;
     html += `</div>`;
 
     html += `<div class="q-title">${q.title}</div>`;
@@ -2092,7 +2092,7 @@ function renderQuestions() {
   const totalPages = Math.ceil(currentQuestions.length / PAGE_SIZE);
   let pagHtml = '';
   pagHtml += `<button ${currentPage===0?'disabled':''} onclick="goPage(${currentPage-1})">◀ 上一页</button>`;
-  pagHtml += `<span>第 ${currentPage+1} / ${totalPages} 页（共 ${currentQuestions.length} 题）</span>`;
+  pagHtml += `<span>第 ${currentPage+1} / ${totalPages} 页（当前显示 ${currentQuestions.length} 题，共 ${QUESTION_BANK.length} 题）</span>`;
   pagHtml += `<button ${currentPage+1>=totalPages?'disabled':''} onclick="goPage(${currentPage+1})">下一页 ▶</button>`;
   pagination.innerHTML = pagHtml;
 
@@ -2320,19 +2320,18 @@ function saveErrorNote(qid, auto) {
 
 // ===== 进度条 =====
 function updateProgressBar() {
-  const qs = currentQuestions.length > 0 ? currentQuestions : getFilteredQuestions();
-  const total = qs.length;
-  let correct = 0, hesitate = 0, wrong = 0, unanswered = 0;
+  const total = QUESTION_BANK.length;
+  let correct = 0, hesitate = 0, wrong = 0;
 
-  qs.forEach(q => {
+  QUESTION_BANK.forEach(q => {
     const s = getQStatus(q.id);
     if (s === 'correct') correct++;
     else if (s === 'hesitate') hesitate++;
     else if (s === 'wrong') wrong++;
-    else unanswered++;
   });
 
   const done = correct + hesitate + wrong;
+  const unanswered = total - done;
   const pct = total > 0 ? Math.round(done / total * 100) : 0;
 
   document.getElementById('progressFill').style.width = pct + '%';
