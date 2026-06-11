@@ -42,17 +42,18 @@ body {
 /* ===== 顶部导航 ===== */
 header {
   background: linear-gradient(135deg, var(--bg2), var(--bg3));
-  padding: 16px 24px;
+  padding: 12px 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   border-bottom: 2px solid var(--accent);
   position: sticky; top:0; z-index:100;
   box-shadow: 0 2px 16px rgba(0,0,0,0.4);
+  flex-wrap:wrap; gap:8px;
 }
-header h1 { font-size:1.4em; color:#fff; margin:0; }
+header h1 { font-size:1.4em; color:#fff; margin:0; order:1; }
 header h1 span { color:var(--accent); }
-.header-user-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.header-user-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; order:3; }
 .header-user-row .user-name { color:var(--accent2); }
 .header-user-row .btn-logout {
   background:transparent; color:var(--text2); border:1px solid var(--border);
@@ -60,7 +61,7 @@ header h1 span { color:var(--accent); }
   transition:var(--transition);
 }
 .header-user-row .btn-logout:hover { border-color:var(--red); color:var(--red); }
-nav { display:flex; gap:8px; flex-wrap:wrap; }
+nav { display:flex; gap:8px; flex-wrap:wrap; order:2; flex:1; justify-content:center; }
 nav button, #nav-admin {
   background: transparent;
   color: var(--text2);
@@ -233,11 +234,11 @@ main { max-width:1100px; margin:0 auto; padding:20px 16px 40px; }
 
 /* ===== 响应式 ===== */
 @media (max-width:768px) {
-  /* 📱 移动端三行布局：标题→用户信息→导航 */
+  /* 📱 移动端三行堆叠：标题 → 用户信息 → 导航 */
   header { flex-direction:column; align-items:center; gap:8px; padding:10px 16px; }
-  header h1 { font-size:1.1em; text-align:center; width:100%; }
-  .header-user-row { justify-content:center; width:100%; }
-  nav { justify-content:center; width:100%; }
+  header h1 { font-size:1.1em; text-align:center; width:100%; order:1; }
+  .header-user-row { justify-content:center; width:100%; order:2; }
+  nav { justify-content:center; width:100%; order:3; flex:none; }
   nav button, #nav-admin { padding:6px 10px; font-size:0.75em; }
   .filter-bar { flex-direction:column; align-items:stretch; }
   .q-card { padding:16px; }
