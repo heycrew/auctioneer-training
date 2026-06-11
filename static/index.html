@@ -1615,9 +1615,21 @@ function formatSize(bytes) {
 let currentBlobUrl = null;
 let currentAbortController = null;
 
-// 📱 触摸设备检测（PC端用分页，移动端用无限滚动）
-const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches;
-const PAGE_SIZE = isTouchDevice ? 8 : 10;  // 移动端每页少一点，自动加载
+// 📱 移动端检测（iPad / 手机用无限滚动，桌面端用翻页）
+const isMobile = (function(){
+  if (typeof navigator === 'undefined') return false;
+  var ua = navigator.userAgent || '';
+  // iPad / iPhone / Android
+  if (/iPad|iPhone|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua)) return true;
+  // iPadOS 13+ 伪装成 Mac，但支持触摸
+  if (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1) return true;
+  // 通用触摸屏检测
+  if (('ontouchstart' in window) && window.matchMedia('(pointer: coarse)').matches) return true;
+  // 小屏幕也可能是手机
+  if (window.innerWidth < 768) return true;
+  return false;
+})();
+const PAGE_SIZE = isMobile ? 8 : 10;
 let currentPage = 0;
 let isLoadingMore = false;
 let scrollObserver = null;
@@ -2099,7 +2111,7 @@ function renderQuestions() {
   // 分页 / 无限滚动（触摸设备用无限滚动）
   const totalPages = Math.ceil(currentQuestions.length / PAGE_SIZE);
   let pagHtml = '';
-  if (isTouchDevice) {
+  if (isMobile) {
     // 移动端：显示当前页位置 + 加载状态
     const shown = Math.min((currentPage+1) * PAGE_SIZE, currentQuestions.length);
     pagHtml = `<span style="color:var(--text2);font-size:0.9em;">已显示 ${shown} / ${currentQuestions.length} 题（下滑自动加载）</span>`;
@@ -2135,7 +2147,7 @@ function goPage(page) {
 
 function loadMore() {
   if (isLoadingMore) return;
-  if (!isTouchDevice) return;
+  if (!isMobile) return;
   const totalPages = Math.ceil(currentQuestions.length / PAGE_SIZE);
   if (currentPage + 1 >= totalPages) return;
   isLoadingMore = true;
@@ -2184,8 +2196,8 @@ function appendMoreQuestions() {
     else if (status === 'hesitate') cardClass = 'hesitate';
     else if (status === 'correct') cardClass = 'correct';
 
-    html += `<div class="question-card ${cardClass}" id="card-${q.id}">`;
-    html += renderCardBody(q, globalIdx, errorEntry, status);
+    html += `<div class="q-card ${cardClass}" id="q-${q.id}">`;
+    html += buildCardBody(q, globalIdx, errorEntry, status);
     html += `</div>`;
   });
 
