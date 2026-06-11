@@ -335,6 +335,7 @@ main { max-width:1100px; margin:0 auto; padding:20px 16px 40px; }
 .pdf-guard-wrapper iframe { position:relative; z-index:1; width:100%; height:100%; border:none; background:#fff; border-radius:8px; }
 .pdf-guard-overlay {
   position:absolute; inset:0; z-index:2; background:transparent;
+  pointer-events:none;
 }
 .viewer-body img { max-width:100%; max-height:100%; object-fit:contain; border-radius:8px; }
 .viewer-body .viewer-unsupported { text-align:center; color:var(--text2); }
@@ -1616,6 +1617,15 @@ function formatSize(bytes) {
 let currentBlobUrl = null;
 let currentAbortController = null;
 
+// 🔒 查看器打开时全局拦截右键（捕获阶段，在事件到达任何子元素前拦截）
+function viewerBlockRightClick(e) {
+  if (document.getElementById('viewerOverlay').style.display !== 'flex') return;
+  // contextmenu 是纯右键事件，mousedown 只拦截 button===2
+  if (e.type === 'contextmenu' || (e.type === 'mousedown' && e.button === 2)) {
+    e.preventDefault(); e.stopPropagation(); return false;
+  }
+}
+
 function openViewer(bookId) {
   if (!authToken) return;
   // 🔧 取消上一个未完成的加载，防止多个进度条并发
@@ -1637,6 +1647,9 @@ function openViewer(bookId) {
 
     body.innerHTML = '<div class="viewer-progress"><div class="viewer-progress-bar"><div class="viewer-progress-fill" id="viewerProgressFill"></div></div><div class="viewer-progress-text" id="viewerProgressText">正在连接…</div></div>';
     document.getElementById('viewerOverlay').style.display = 'flex';
+    // 🔒 全局拦截右键 + 鼠标侧键（捕获阶段，早于iframe内部处理）
+    document.addEventListener('contextmenu', viewerBlockRightClick, true);
+    document.addEventListener('mousedown', viewerBlockRightClick, true);
 
     fetch(loadUrl, {
       headers: { 'Authorization': 'Bearer ' + authToken },
@@ -1675,18 +1688,11 @@ function openViewer(bookId) {
         if (controller.signal.aborted) return;
         currentBlobUrl = URL.createObjectURL(blob);
         if (ext === 'pdf') {
+          // 🔒 遮罩 pointer-events:none 放行所有鼠标事件（滚轮/点击），仅作视觉层
+          //    右键拦截通过 document 捕获阶段 + mousedown(button=2) 实现
           body.innerHTML = '<div class="pdf-guard-wrapper" id="pdfGuard">' +
             '<iframe src="' + currentBlobUrl + '#toolbar=0&navpanes=0&scrollbar=1&statusbar=0"></iframe>' +
-            '<div class="pdf-guard-overlay" id="pdfGuardOverlay"></div></div>';
-          var ov = document.getElementById('pdfGuardOverlay');
-          if (ov) {
-            ov.addEventListener('contextmenu', function(e){ e.preventDefault(); return false; });
-            // 滚轮穿透：临时pointer-events:none放行，下一个动画帧恢复
-            ov.addEventListener('wheel', function(e){
-              ov.style.pointerEvents = 'none';
-              requestAnimationFrame(function(){ ov.style.pointerEvents = 'auto'; });
-            }, {passive: true});
-          }
+            '<div class="pdf-guard-overlay" id="pdfGuardOverlay" style="pointer-events:none;"></div></div>';
         } else if (ext === 'jpg' || ext === 'jpeg' || ext === 'png') {
           body.innerHTML = '<img src="' + currentBlobUrl + '" alt="' + escHtml(book.name) + '" style="pointer-events:none;max-width:100%;max-height:100%;object-fit:contain;" draggable="false">';
         } else {
@@ -1705,6 +1711,9 @@ function closeViewer() {
   document.getElementById('viewerOverlay').style.display = 'none';
   document.getElementById('viewerBody').innerHTML = '';
   if (currentBlobUrl) { URL.revokeObjectURL(currentBlobUrl); currentBlobUrl = null; }
+  // 恢复右键
+  document.removeEventListener('contextmenu', viewerBlockRightClick, true);
+  document.removeEventListener('mousedown', viewerBlockRightClick, true);
 }
 
 // 🔒 downloadBook 已移除（不再提供下载功能）
