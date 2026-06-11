@@ -1615,6 +1615,13 @@ function formatSize(bytes) {
 let currentBlobUrl = null;
 let currentAbortController = null;
 
+// 📱 触摸设备检测（PC端用分页，移动端用无限滚动）
+const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches;
+const PAGE_SIZE = isTouchDevice ? 8 : 10;  // 移动端每页少一点，自动加载
+let currentPage = 0;
+let isLoadingMore = false;
+let scrollObserver = null;
+
 function openViewer(bookId) {
   if (!authToken) return;
   // 🔧 取消上一个未完成的加载，防止多个进度条并发
@@ -1868,8 +1875,6 @@ function getShuffledOrder(q) {
 
 // 全局变量
 let currentQuestions = [];
-let currentPage = 0;
-const PAGE_SIZE = 10;
 let typeFilters = ['all'];
 let starOnly = false;
 
@@ -1995,6 +2000,67 @@ function randomizeQuestions() {
 }
 
 // ===== 渲染题目 =====
+function buildCardBody(q, globalIdx, errorEntry, status) {
+  let h = '';
+  const typeNames = { single: '单选题', multi: '多选题', case: '案例分析', essay: '论述题' };
+  const typeName = typeNames[q.type] || q.type;
+
+  h += `<div class="q-header">`;
+  h += `<div class="q-badges">`;
+  h += `<span class="q-badge subject">${q.subject}</span>`;
+  h += `<span class="q-badge chapter">${q.chapter}</span>`;
+  h += `<span class="q-badge type">${typeName}</span>`;
+  if (q.isStar) h += `<span class="q-badge star">⭐ 重点</span>`;
+  h += `</div>`;
+  h += `<span class="q-number">#${globalIdx} / ${QUESTION_BANK.length}</span>`;
+  h += `</div>`;
+
+  h += `<div class="q-title">${q.title}</div>`;
+
+  if (q.options.length > 0 && (q.type === 'single' || q.type === 'multi')) {
+    h += `<div class="q-options">`;
+    const labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const inputType = q.type === 'single' ? 'radio' : 'checkbox';
+    const shuffled = getShuffledOrder(q);
+    shuffled.forEach((origIdx, shuffIdx) => {
+      const opt = q.options[origIdx];
+      h += `<div class="q-option" id="opt-${q.id}-${shuffIdx}" onclick="selectOption('${q.id}', ${shuffIdx}, '${q.type}')">`;
+      h += `<input type="${inputType}" name="q-${q.id}" value="${shuffIdx}" style="pointer-events:none;flex-shrink:0;">`;
+      h += `<span>${labels[shuffIdx]}. ${opt}</span>`;
+      h += `</div>`;
+    });
+    h += `</div>`;
+    h += `<div class="q-check-area">`;
+    h += `<button class="btn-check" onclick="checkAnswer('${q.id}')">✅ 提交答案</button>`;
+    h += `<button class="btn-show" onclick="showAnswer('${q.id}')">💡 显示答案</button>`;
+    h += `</div>`;
+    h += `<div class="q-feedback" id="fb-${q.id}"></div>`;
+  } else {
+    h += `<div style="color:var(--text2);font-size:0.9em;margin-bottom:12px;">📝 本题为${typeName}，请在纸上作答后对照要点自我评估。</div>`;
+    h += `<button class="btn-show" onclick="showAnswer('${q.id}')">💡 显示参考答案要点</button>`;
+    h += `<div class="q-feedback" id="fb-${q.id}"></div>`;
+  }
+
+  h += `<div class="self-assess" id="sa-${q.id}" style="${status ? '' : 'display:none;'}">`;
+  h += `<span>自我评估：</span>`;
+  h += `<button class="rate-wrong ${status==='wrong'?'active':''}" onclick="rateQuestion('${q.id}', 'wrong')">❌ 答错</button>`;
+  h += `<button class="rate-hesitate ${status==='hesitate'?'active':''}" onclick="rateQuestion('${q.id}', 'hesitate')">⚡ 犹豫</button>`;
+  h += `<button class="rate-correct ${status==='correct'?'active':''}" onclick="rateQuestion('${q.id}', 'correct')">✅ 正确</button>`;
+  h += `</div>`;
+
+  const showNote = (status === 'wrong' || status === 'hesitate');
+  h += `<div class="note-input" id="note-${q.id}" style="${showNote ? 'display:block;' : 'display:none;'}">`;
+  h += `<select id="cause-${q.id}"><option value="">选择错误根因...</option>`;
+  ['概念混淆','遗忘','理解偏差','审题大意','其他'].forEach(c => {
+    h += `<option value="${c}" ${errorEntry&&errorEntry.rootCause===c?'selected':''}>${c}</option>`;
+  });
+  h += `</select>`;
+  h += `<textarea id="note-text-${q.id}" placeholder="修正笔记（正确理解是什么）...">${errorEntry ? errorEntry.note || '' : ''}</textarea>`;
+  h += `<button onclick="saveErrorNote('${q.id}')">💾 保存到错题本</button>`;
+  h += `</div>`;
+  return h;
+}
+
 function renderQuestions() {
   const container = document.getElementById('questionContainer');
   const pagination = document.getElementById('pagination');
@@ -2024,76 +2090,33 @@ function renderQuestions() {
     const typeName = typeNames[q.type] || q.type;
 
     html += `<div class="q-card ${cardClass}" id="q-${q.id}">`;
-    html += `<div class="q-header">`;
-    html += `<div class="q-badges">`;
-    html += `<span class="q-badge subject">${q.subject}</span>`;
-    html += `<span class="q-badge chapter">${q.chapter}</span>`;
-    html += `<span class="q-badge type">${typeName}</span>`;
-    if (q.isStar) html += `<span class="q-badge star">⭐ 重点</span>`;
-    html += `</div>`;
-    html += `<span class="q-number">#${globalIdx} / ${QUESTION_BANK.length}</span>`;
-    html += `</div>`;
-
-    html += `<div class="q-title">${q.title}</div>`;
-
-    // 选项（随机排序）
-    if (q.options.length > 0 && (q.type === 'single' || q.type === 'multi')) {
-      html += `<div class="q-options">`;
-      const labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-      const inputType = q.type === 'single' ? 'radio' : 'checkbox';
-      const shuffled = getShuffledOrder(q); // shuffledPos → originalPos
-      shuffled.forEach((origIdx, shuffIdx) => {
-        const opt = q.options[origIdx];
-        html += `<div class="q-option" id="opt-${q.id}-${shuffIdx}" onclick="selectOption('${q.id}', ${shuffIdx}, '${q.type}')">`;
-        html += `<input type="${inputType}" name="q-${q.id}" value="${shuffIdx}" style="pointer-events:none;flex-shrink:0;">`;
-        html += `<span>${labels[shuffIdx]}. ${opt}</span>`;
-        html += `</div>`;
-      });
-      html += `</div>`;
-
-      html += `<div class="q-check-area">`;
-      html += `<button class="btn-check" onclick="checkAnswer('${q.id}')">✅ 提交答案</button>`;
-      html += `<button class="btn-show" onclick="showAnswer('${q.id}')">💡 显示答案</button>`;
-      html += `</div>`;
-      html += `<div class="q-feedback" id="fb-${q.id}"></div>`;
-    } else {
-      // 综合题/论述题——自评
-      html += `<div style="color:var(--text2);font-size:0.9em;margin-bottom:12px;">📝 本题为${typeName}，请在纸上作答后对照要点自我评估。</div>`;
-      html += `<button class="btn-show" onclick="showAnswer('${q.id}')">💡 显示参考答案要点</button>`;
-      html += `<div class="q-feedback" id="fb-${q.id}"></div>`;
-    }
-
-    // 自我评估区
-    html += `<div class="self-assess" id="sa-${q.id}" style="${status ? '' : 'display:none;'}">`;
-    html += `<span>自我评估：</span>`;
-    html += `<button class="rate-wrong ${status==='wrong'?'active':''}" onclick="rateQuestion('${q.id}', 'wrong')">❌ 答错</button>`;
-    html += `<button class="rate-hesitate ${status==='hesitate'?'active':''}" onclick="rateQuestion('${q.id}', 'hesitate')">⚡ 犹豫</button>`;
-    html += `<button class="rate-correct ${status==='correct'?'active':''}" onclick="rateQuestion('${q.id}', 'correct')">✅ 正确</button>`;
-    html += `</div>`;
-
-    // 错题笔记区（始终渲染内部元素，通过 display 控制显隐）
-    const showNote = (status === 'wrong' || status === 'hesitate');
-    html += `<div class="note-input" id="note-${q.id}" style="${showNote ? 'display:block;' : 'display:none;'}">`;
-    html += `<select id="cause-${q.id}"><option value="">选择错误根因...</option>`;
-    ['概念混淆','遗忘','理解偏差','审题大意','其他'].forEach(c => {
-      html += `<option value="${c}" ${errorEntry&&errorEntry.rootCause===c?'selected':''}>${c}</option>`;
-    });
-    html += `</select>`;
-    html += `<textarea id="note-text-${q.id}" placeholder="修正笔记（正确理解是什么）...">${errorEntry ? errorEntry.note || '' : ''}</textarea>`;
-    html += `<button onclick="saveErrorNote('${q.id}')">💾 保存到错题本</button>`;
-    html += `</div>`;
-
+    html += buildCardBody(q, globalIdx, errorEntry, status);
     html += `</div>`;
   });
 
   container.innerHTML = html;
 
-  // 分页
+  // 分页 / 无限滚动（触摸设备用无限滚动）
   const totalPages = Math.ceil(currentQuestions.length / PAGE_SIZE);
   let pagHtml = '';
-  pagHtml += `<button ${currentPage===0?'disabled':''} onclick="goPage(${currentPage-1})">◀ 上一页</button>`;
-  pagHtml += `<span>第 ${currentPage+1} / ${totalPages} 页（当前显示 ${currentQuestions.length} 题，共 ${QUESTION_BANK.length} 题）</span>`;
-  pagHtml += `<button ${currentPage+1>=totalPages?'disabled':''} onclick="goPage(${currentPage+1})">下一页 ▶</button>`;
+  if (isTouchDevice) {
+    // 移动端：显示当前页位置 + 加载状态
+    const shown = Math.min((currentPage+1) * PAGE_SIZE, currentQuestions.length);
+    pagHtml = `<span style="color:var(--text2);font-size:0.9em;">已显示 ${shown} / ${currentQuestions.length} 题（下滑自动加载）</span>`;
+    if (shown < currentQuestions.length) {
+      pagHtml += `<div id="scrollSentinel" style="padding:20px;text-align:center;color:var(--text2);">⏳ 加载更多…</div>`;
+      setupScrollObserver();
+    } else {
+      pagHtml += `<div style="padding:20px;text-align:center;color:var(--text2);font-size:0.85em;">✅ 已加载全部题目</div>`;
+      removeScrollObserver();
+    }
+  } else {
+    // PC端：传统翻页
+    pagHtml += `<button ${currentPage===0?'disabled':''} onclick="goPage(${currentPage-1})">◀ 上一页</button>`;
+    pagHtml += `<span>第 ${currentPage+1} / ${totalPages} 页（当前显示 ${currentQuestions.length} 题，共 ${QUESTION_BANK.length} 题）</span>`;
+    pagHtml += `<button ${currentPage+1>=totalPages?'disabled':''} onclick="goPage(${currentPage+1})">下一页 ▶</button>`;
+    removeScrollObserver();
+  }
   pagination.innerHTML = pagHtml;
 
   // 恢复已显示的答案
@@ -2108,6 +2131,98 @@ function goPage(page) {
   currentPage = page;
   renderQuestions();
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function loadMore() {
+  if (isLoadingMore) return;
+  if (!isTouchDevice) return;
+  const totalPages = Math.ceil(currentQuestions.length / PAGE_SIZE);
+  if (currentPage + 1 >= totalPages) return;
+  isLoadingMore = true;
+  currentPage++;
+  // 移动端追加内容（不重置）
+  appendMoreQuestions();
+  isLoadingMore = false;
+}
+
+function setupScrollObserver() {
+  if (scrollObserver) return;
+  scrollObserver = new IntersectionObserver(function(entries) {
+    if (entries[0] && entries[0].isIntersecting) {
+      loadMore();
+    }
+  }, { rootMargin: '200px' });
+  // 延迟一帧再观察（确保DOM已渲染）
+  setTimeout(function() {
+    var sentinel = document.getElementById('scrollSentinel');
+    if (sentinel && scrollObserver) scrollObserver.observe(sentinel);
+  }, 100);
+}
+
+function removeScrollObserver() {
+  if (scrollObserver) {
+    scrollObserver.disconnect();
+    scrollObserver = null;
+  }
+}
+
+function appendMoreQuestions() {
+  const container = document.getElementById('questionContainer');
+  const pagination = document.getElementById('pagination');
+  const start = currentPage * PAGE_SIZE;
+  const end = Math.min(start + PAGE_SIZE, currentQuestions.length);
+  const pageQs = currentQuestions.slice(start, end);
+
+  let html = '';
+  pageQs.forEach((q, idx) => {
+    const globalIdx = start + idx + 1;
+    const status = getQStatus(q.id);
+    const errorEntry = getErrorEntry(q.id);
+
+    let cardClass = '';
+    if (status === 'wrong') cardClass = 'wrong';
+    else if (status === 'hesitate') cardClass = 'hesitate';
+    else if (status === 'correct') cardClass = 'correct';
+
+    html += `<div class="question-card ${cardClass}" id="card-${q.id}">`;
+    html += renderCardBody(q, globalIdx, errorEntry, status);
+    html += `</div>`;
+  });
+
+  // 插入到 sentinel 之前
+  const sentinel = document.getElementById('scrollSentinel');
+  if (sentinel) {
+    sentinel.insertAdjacentHTML('beforebegin', html);
+  } else {
+    container.insertAdjacentHTML('beforeend', html);
+  }
+
+  // 恢复已显示的答案
+  pageQs.forEach(q => {
+    if (appState.progress[q.id] && appState.progress[q.id].answerShown) {
+      showAnswer(q.id, true);
+    }
+  });
+
+  // 更新分页
+  const totalPages = Math.ceil(currentQuestions.length / PAGE_SIZE);
+  const shown = Math.min((currentPage+1) * PAGE_SIZE, currentQuestions.length);
+  let pagHtml = `<span style="color:var(--text2);font-size:0.9em;">已显示 ${shown} / ${currentQuestions.length} 题（下滑自动加载）</span>`;
+  if (shown < currentQuestions.length) {
+    pagHtml += `<div id="scrollSentinel" style="padding:20px;text-align:center;color:var(--text2);">⏳ 加载更多…</div>`;
+  } else {
+    pagHtml += `<div style="padding:20px;text-align:center;color:var(--text2);font-size:0.85em;">✅ 已加载全部题目</div>`;
+    removeScrollObserver();
+  }
+  pagination.innerHTML = pagHtml;
+
+  // 重新观察新sentinel
+  if (shown < currentQuestions.length) {
+    setTimeout(function() {
+      var newSentinel = document.getElementById('scrollSentinel');
+      if (newSentinel && scrollObserver) scrollObserver.observe(newSentinel);
+    }, 100);
+  }
 }
 
 function selectOption(qid, oi, type) {

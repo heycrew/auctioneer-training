@@ -1429,8 +1429,12 @@ function getUserStorageKey(username) {
 // ===================================================================
 let appState = { errors: {}, progress: {}, reviewSessions: [] };
 let currentQuestions = [];
+// 📱 触摸设备检测
+const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches;
+const PAGE_SIZE = isTouchDevice ? 8 : 10;
 let currentPage = 0;
-const PAGE_SIZE = 10;
+let isLoadingMore = false;
+let scrollObserver = null;
 let typeFilters = ['all'];
 let starOnly = false;
 
@@ -2121,12 +2125,25 @@ function renderQuestions() {
 
   container.innerHTML = html;
 
-  // 分页
+  // 分页 / 无限滚动
   const totalPages = Math.ceil(currentQuestions.length / PAGE_SIZE);
   let pagHtml = '';
-  pagHtml += `<button ${currentPage===0?'disabled':''} onclick="goPage(${currentPage-1})">◀ 上一页</button>`;
-  pagHtml += `<span>第 ${currentPage+1} / ${totalPages} 页（当前显示 ${currentQuestions.length} 题，共 ${QUESTION_BANK.length} 题）</span>`;
-  pagHtml += `<button ${currentPage+1>=totalPages?'disabled':''} onclick="goPage(${currentPage+1})">下一页 ▶</button>`;
+  if (isTouchDevice) {
+    const shown = Math.min((currentPage+1) * PAGE_SIZE, currentQuestions.length);
+    pagHtml = `<span style="color:var(--text2);font-size:0.9em;">已显示 ${shown} / ${currentQuestions.length} 题（下滑自动加载）</span>`;
+    if (shown < currentQuestions.length) {
+      pagHtml += `<div id="scrollSentinel" style="padding:20px;text-align:center;color:var(--text2);">⏳ 加载更多…</div>`;
+      setupScrollObserver();
+    } else {
+      pagHtml += `<div style="padding:20px;text-align:center;color:var(--text2);font-size:0.85em;">✅ 已加载全部题目</div>`;
+      removeScrollObserver();
+    }
+  } else {
+    pagHtml += `<button ${currentPage===0?'disabled':''} onclick="goPage(${currentPage-1})">◀ 上一页</button>`;
+    pagHtml += `<span>第 ${currentPage+1} / ${totalPages} 页（当前显示 ${currentQuestions.length} 题，共 ${QUESTION_BANK.length} 题）</span>`;
+    pagHtml += `<button ${currentPage+1>=totalPages?'disabled':''} onclick="goPage(${currentPage+1})">下一页 ▶</button>`;
+    removeScrollObserver();
+  }
   pagination.innerHTML = pagHtml;
 
   // 恢复已显示的答案
@@ -2141,6 +2158,78 @@ function goPage(page) {
   currentPage = page;
   renderQuestions();
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function loadMore() {
+  if (isLoadingMore) return;
+  if (!isTouchDevice) return;
+  const totalPages = Math.ceil(currentQuestions.length / PAGE_SIZE);
+  if (currentPage + 1 >= totalPages) return;
+  isLoadingMore = true;
+  currentPage++;
+  appendMoreQuestions();
+  isLoadingMore = false;
+}
+
+function setupScrollObserver() {
+  if (scrollObserver) return;
+  scrollObserver = new IntersectionObserver(function(entries) {
+    if (entries[0] && entries[0].isIntersecting) loadMore();
+  }, { rootMargin: '200px' });
+  setTimeout(function() {
+    var sentinel = document.getElementById('scrollSentinel');
+    if (sentinel && scrollObserver) scrollObserver.observe(sentinel);
+  }, 100);
+}
+
+function removeScrollObserver() {
+  if (scrollObserver) { scrollObserver.disconnect(); scrollObserver = null; }
+}
+
+function appendMoreQuestions() {
+  const container = document.getElementById('questionContainer');
+  const pagination = document.getElementById('pagination');
+  const start = currentPage * PAGE_SIZE;
+  const end = Math.min(start + PAGE_SIZE, currentQuestions.length);
+  const pageQs = currentQuestions.slice(start, end);
+  let html = '';
+  pageQs.forEach((q, idx) => {
+    const globalIdx = start + idx + 1;
+    const status = getQStatus(q.id);
+    const errorEntry = getErrorEntry(q.id);
+    let cardClass = '';
+    if (status === 'wrong') cardClass = 'wrong';
+    else if (status === 'hesitate') cardClass = 'hesitate';
+    else if (status === 'correct') cardClass = 'correct';
+    html += `<div class="question-card ${cardClass}" id="card-${q.id}">`;
+    // 使用与renderQuestions相同的内联结构（简化版）
+    const typeNames = { single: '单选题', multi: '多选题', case: '案例分析', essay: '论述题' };
+    const typeName = typeNames[q.type] || q.type;
+    html += `<div class="q-header"><div class="q-badges"><span class="q-badge subject">${q.subject}</span><span class="q-badge chapter">${q.chapter}</span><span class="q-badge type">${typeName}</span>`;
+    if (q.isStar) html += `<span class="q-badge star">⭐ 重点</span>`;
+    html += `</div><span class="q-number">#${globalIdx} / ${QUESTION_BANK.length}</span></div>`;
+    html += `<div class="q-title">${q.title}</div>`;
+    html += `</div>`;
+  });
+  const sentinel = document.getElementById('scrollSentinel');
+  if (sentinel) sentinel.insertAdjacentHTML('beforebegin', html);
+  else container.insertAdjacentHTML('beforeend', html);
+  // 更新分页
+  const shown = Math.min((currentPage+1) * PAGE_SIZE, currentQuestions.length);
+  let pagHtml = `<span style="color:var(--text2);font-size:0.9em;">已显示 ${shown} / ${currentQuestions.length} 题（下滑自动加载）</span>`;
+  if (shown < currentQuestions.length) {
+    pagHtml += `<div id="scrollSentinel" style="padding:20px;text-align:center;color:var(--text2);">⏳ 加载更多…</div>`;
+  } else {
+    pagHtml += `<div style="padding:20px;text-align:center;color:var(--text2);font-size:0.85em;">✅ 已加载全部题目</div>`;
+    removeScrollObserver();
+  }
+  pagination.innerHTML = pagHtml;
+  if (shown < currentQuestions.length) {
+    setTimeout(function() {
+      var newSentinel = document.getElementById('scrollSentinel');
+      if (newSentinel && scrollObserver) scrollObserver.observe(newSentinel);
+    }, 100);
+  }
 }
 
 function selectOption(qid, oi, type) {
