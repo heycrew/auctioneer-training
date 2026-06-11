@@ -1959,11 +1959,15 @@ function getFilteredQuestions() {
   // 重点题
   if (starOnly) qs = qs.filter(q => q.isStar);
 
-  // 🔄 排序：未做题在前，已做对的在中，错题/犹豫在最后
+  // 🔄 隐藏已做对的题，未做题在前，错题/犹豫在后
+  qs = qs.filter(q => {
+    const s = appState.progress[q.id]?.status || '';
+    return s !== 'correct';
+  });
   qs.sort((a, b) => {
     const sa = appState.progress[a.id]?.status || '';
     const sb = appState.progress[b.id]?.status || '';
-    const rank = { '': 0, 'correct': 1, 'hesitate': 2, 'wrong': 3 };
+    const rank = { '': 0, 'hesitate': 1, 'wrong': 2 };
     return (rank[sa] || 0) - (rank[sb] || 0);
   });
 
