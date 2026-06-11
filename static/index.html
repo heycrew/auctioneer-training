@@ -1615,21 +1615,18 @@ function formatSize(bytes) {
 let currentBlobUrl = null;
 let currentAbortController = null;
 
-// 📱 移动端检测（iPad / 手机用无限滚动，桌面端用翻页）
+// 📱 移动端检测：iPad/手机用无限滚动+大页，桌面端用翻页
+// 也接受小屏(≤1024px)和触摸设备
 const isMobile = (function(){
   if (typeof navigator === 'undefined') return false;
   var ua = navigator.userAgent || '';
-  // iPad / iPhone / Android
   if (/iPad|iPhone|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua)) return true;
-  // iPadOS 13+ 伪装成 Mac，但支持触摸
   if (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1) return true;
-  // 通用触摸屏检测
-  if (('ontouchstart' in window) && window.matchMedia('(pointer: coarse)').matches) return true;
-  // 小屏幕也可能是手机
-  if (window.innerWidth < 768) return true;
+  if ('ontouchstart' in window) return true;
+  if (window.innerWidth <= 1024) return true;
   return false;
 })();
-const PAGE_SIZE = isMobile ? 8 : 10;
+const PAGE_SIZE = isMobile ? 12 : 10;  // 移动端每页12题，滚到底自动加载
 let currentPage = 0;
 let isLoadingMore = false;
 let scrollObserver = null;

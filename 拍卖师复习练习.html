@@ -1435,11 +1435,11 @@ const isMobile = (function(){
   var ua = navigator.userAgent || '';
   if (/iPad|iPhone|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua)) return true;
   if (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1) return true;
-  if (('ontouchstart' in window) && window.matchMedia('(pointer: coarse)').matches) return true;
-  if (window.innerWidth < 768) return true;
+  if ('ontouchstart' in window) return true;
+  if (window.innerWidth <= 1024) return true;
   return false;
 })();
-const PAGE_SIZE = isMobile ? 8 : 10;
+const PAGE_SIZE = isMobile ? 12 : 10;
 let currentPage = 0;
 let isLoadingMore = false;
 let scrollObserver = null;
