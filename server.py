@@ -195,6 +195,15 @@ def api_login():
 # ============================================================
 # API - 进度同步
 # ============================================================
+@app.route('/api/progress', methods=['DELETE'])
+@require_auth
+def api_clear_progress():
+    db = get_db()
+    db.execute("DELETE FROM progress WHERE user_id=?", (g.user['uid'],))
+    db.commit()
+    db.close()
+    return jsonify({'ok': True})
+
 @app.route('/api/progress', methods=['GET'])
 @require_auth
 def api_get_progress():

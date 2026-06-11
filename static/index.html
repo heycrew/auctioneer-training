@@ -1926,6 +1926,15 @@ function getFilteredQuestions() {
   // 重点题
   if (starOnly) qs = qs.filter(q => q.isStar);
 
+  // 🔄 排序：未做题在前，已做对的在中，错题/犹豫在最后
+  qs.sort((a, b) => {
+    const sa = appState.progress[a.id]?.status || '';
+    const sb = appState.progress[b.id]?.status || '';
+    // 未做(0) < 正确(1) < 犹豫(2) < 错误(3)
+    const rank = { '': 0, 'correct': 1, 'hesitate': 2, 'wrong': 3 };
+    return (rank[sa] || 0) - (rank[sb] || 0);
+  });
+
   return qs;
 }
 
@@ -2541,14 +2550,16 @@ function clearAllErrors() {
   }
 }
 
-function resetAllProgress() {
-  if (confirm('确定要重置所有学习进度吗？（错题本将被保留，选项顺序将重新随机排列）')) {
+async function resetAllProgress() {
+  if (confirm('确定要重置所有学习进度吗？（错题本和统计将被保留，仅重置答题状态）')) {
     appState.progress = {};
     shuffleMap = {};
     shuffleReverse = {};
-    saveState();
+    // 同步清空服务端进度（错题本不受影响）
+    try { await api('/api/progress', { method: 'DELETE' }); } catch(e) {}
     applyFilters();
-    alert('✅ 进度已重置，选项顺序已重新洗牌');
+    updateProgressBar();
+    alert('✅ 进度已重置（错题本和统计已保留）');
   }
 }
 
