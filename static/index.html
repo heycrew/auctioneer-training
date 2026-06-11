@@ -311,6 +311,8 @@ main { max-width:1100px; margin:0 auto; padding:20px 16px 40px; }
 .viewer-overlay {
   position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:10000;
   display:flex; flex-direction:column;
+  /* 🔒 禁止文本选择 */
+  -webkit-user-select:none; user-select:none;
 }
 .viewer-toolbar {
   display:flex; justify-content:space-between; align-items:center;
@@ -325,6 +327,8 @@ main { max-width:1100px; margin:0 auto; padding:20px 16px 40px; }
 .viewer-body {
   flex:1; display:flex; align-items:center; justify-content:center;
   overflow:auto; padding:20px;
+  /* 🔒 禁止文本选择 */
+  -webkit-user-select:none; user-select:none;
 }
 .viewer-body iframe { width:100%; height:100%; border:none; background:#fff; border-radius:8px; }
 .viewer-body img { max-width:100%; max-height:100%; object-fit:contain; border-radius:8px; }
@@ -332,6 +336,13 @@ main { max-width:1100px; margin:0 auto; padding:20px 16px 40px; }
 .viewer-body .viewer-unsupported button {
   margin-top:16px; background:var(--accent); color:#fff; border:none;
   padding:10px 24px; border-radius:20px; cursor:pointer; font-size:1em;
+}
+/* 🔒 查看器水印层（视觉威慑） */
+.viewer-watermark {
+  position:fixed; inset:0; z-index:10001; pointer-events:none;
+  display:flex; align-items:center; justify-content:center;
+  opacity:0.03; font-size:4em; color:#fff; white-space:nowrap;
+  transform:rotate(-25deg); letter-spacing:0.3em;
 }
 </style>
 </head>
@@ -461,12 +472,14 @@ main { max-width:1100px; margin:0 auto; padding:20px 16px 40px; }
 </div>
 
 <!-- ==================== 查看器弹窗 ==================== -->
-<div class="viewer-overlay" id="viewerOverlay" style="display:none;">
+<div class="viewer-overlay" id="viewerOverlay" style="display:none;" oncontextmenu="return false;">
+  <div class="viewer-watermark" id="viewerWatermark"></div>
   <div class="viewer-toolbar">
     <span id="viewerTitle">教材查看</span>
+    <span style="color:var(--text2);font-size:0.75em;margin:0 12px;">🔒 内容已保护</span>
     <button onclick="closeViewer()">✕ 关闭</button>
   </div>
-  <div class="viewer-body" id="viewerBody"></div>
+  <div class="viewer-body" id="viewerBody" oncontextmenu="return false;"></div>
 </div>
 
 <!-- ==================== 管理后台 ==================== -->
@@ -1581,36 +1594,58 @@ function formatSize(bytes) {
   return (bytes / 1048576).toFixed(1) + 'MB';
 }
 
+// 🔒 当前查看器的 Blob URL（关闭时释放）
+let currentBlobUrl = null;
+
 function openViewer(bookId) {
   if (!authToken) return;
-  const viewUrl = API_BASE + '/api/books/' + bookId + '/download?token=' + encodeURIComponent(authToken);
-  // 先用 fetch 获取文件信息
   api('/api/books').then(d => {
     const book = (d.books || []).find(b => b.id === bookId);
     if (!book) return;
     document.getElementById('viewerTitle').textContent = book.name;
+    document.getElementById('viewerWatermark').textContent = book.name;
     const body = document.getElementById('viewerBody');
-    const ext = book.type || '';
-    if (ext === 'pdf') {
-      body.innerHTML = '<iframe src="' + viewUrl + '"></iframe>';
-    } else if (ext === 'jpg' || ext === 'jpeg' || ext === 'png') {
-      body.innerHTML = '<img src="' + viewUrl + '" alt="' + escHtml(book.name) + '">';
-    } else {
-      body.innerHTML = '<div class="viewer-unsupported"><p>📝 此格式建议下载查看</p><button onclick="downloadBook(\'' + book.id + '\')">⬇️ 下载查看</button></div>';
-    }
+    const ext = (book.type || '').toLowerCase();
+
+    // 🔒 通过 fetch + Authorization header 获取文件（token 不出现在 URL 中）
+    const loadUrl = API_BASE + '/api/books/' + bookId + '/download';
+    body.innerHTML = '<div style="color:var(--text2);text-align:center;padding:60px;"><p style="font-size:2em;">⏳</p><p>正在加载教材…</p></div>';
     document.getElementById('viewerOverlay').style.display = 'flex';
+
+    if (ext === 'pdf') {
+      fetch(loadUrl, { headers: { 'Authorization': 'Bearer ' + authToken } })
+        .then(r => { if (!r.ok) throw new Error('加载失败'); return r.blob(); })
+        .then(blob => {
+          if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
+          currentBlobUrl = URL.createObjectURL(blob);
+          // 🔒 使用 sandbox iframe 并禁用工具栏和下载
+          body.innerHTML = '<iframe src="' + currentBlobUrl + '#toolbar=0&navpanes=0&scrollbar=1" sandbox="allow-scripts allow-same-origin"></iframe>';
+        })
+        .catch(e => { body.innerHTML = '<div style="color:var(--red);text-align:center;padding:60px;"><p>❌ 加载失败</p><p style="font-size:0.85em;">' + e.message + '</p></div>'; });
+    } else if (ext === 'jpg' || ext === 'jpeg' || ext === 'png') {
+      fetch(loadUrl, { headers: { 'Authorization': 'Bearer ' + authToken } })
+        .then(r => { if (!r.ok) throw new Error('加载失败'); return r.blob(); })
+        .then(blob => {
+          if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
+          currentBlobUrl = URL.createObjectURL(blob);
+          body.innerHTML = '<img src="' + currentBlobUrl + '" alt="' + escHtml(book.name) + '" style="pointer-events:none;" draggable="false">';
+        })
+        .catch(e => { body.innerHTML = '<div style="color:var(--red);text-align:center;padding:60px;"><p>❌ 加载失败</p></div>'; });
+    } else {
+      body.innerHTML = '<div class="viewer-unsupported"><p>📝 此格式不支持在线预览</p></div>';
+    }
   });
 }
 
 function closeViewer() {
   document.getElementById('viewerOverlay').style.display = 'none';
   document.getElementById('viewerBody').innerHTML = '';
+  // 🔒 立即释放 Blob URL，防止内存中残留
+  if (currentBlobUrl) { URL.revokeObjectURL(currentBlobUrl); currentBlobUrl = null; }
 }
 
-function downloadBook(bookId) {
-  if (!authToken) return;
-  window.open(API_BASE + '/api/books/' + bookId + '/download?token=' + encodeURIComponent(authToken), '_blank');
-}
+// 🔒 downloadBook 已移除（不再提供下载功能）
+// function downloadBook(bookId) { ... } — DELETED
 
 async function uploadBook() {
   const nameInput = document.getElementById('bookName');
@@ -1686,9 +1721,20 @@ function escHtml(str) {
   return div.innerHTML;
 }
 
-// ===== 键盘 ESC 关闭查看器 =====
+// ===== 键盘快捷键控制 =====
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') closeViewer();
+  if (e.key === 'Escape') { closeViewer(); return; }
+  // 🔒 查看器打开时，禁用下载/打印/保存快捷键
+  const viewerOpen = document.getElementById('viewerOverlay').style.display === 'flex';
+  if (viewerOpen) {
+    // Ctrl+S, Ctrl+P, Ctrl+U, F12, Ctrl+Shift+I, Ctrl+Shift+J
+    if ((e.ctrlKey || e.metaKey) && ['s','p','u','S','P','U'].includes(e.key)) {
+      e.preventDefault(); e.stopPropagation(); return false;
+    }
+    if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I','J','C','i','j','c'].includes(e.key))) {
+      e.preventDefault(); e.stopPropagation(); return false;
+    }
+  }
 });
 
 // ===== 初始化 =====

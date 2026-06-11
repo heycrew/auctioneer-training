@@ -283,11 +283,9 @@ def _auth_from_query():
 
 @app.route('/api/books/<book_id>/download', methods=['GET'])
 def api_download_book(book_id):
-    # 优先从 Authorization header 认证，其次从 ?token= 参数
+    # 🔒 仅支持 Authorization header 认证，禁止 URL ?token= 参数（防止链接分享/源码泄露）
     token = request.headers.get('Authorization', '').replace('Bearer ', '')
     user = parse_token(token) if token else None
-    if not user:
-        user = parse_token(request.args.get('token', ''))
     if not user:
         return jsonify({'error': '未登录或登录已过期'}), 401
     db = get_db()
@@ -306,10 +304,15 @@ def api_download_book(book_id):
     }
     mimetype = mime_map.get(book['type'], 'application/octet-stream')
     response = send_file(filepath, mimetype=mimetype)
-    # 强制 inline 显示，RFC 5987 编码处理中文文件名
+    # 强制 inline 显示（不允许浏览器触发下载），RFC 5987 编码处理中文文件名
     from urllib.parse import quote
     safe_name = quote(book['name'])
     response.headers['Content-Disposition'] = 'inline; filename*=UTF-8\'\'%s' % safe_name
+    # 🔒 安全头：禁止浏览器嗅探MIME、禁止iframe嵌套外部、禁用缓存
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
     return response
 
 @app.route('/api/books/upload', methods=['POST'])
