@@ -326,16 +326,12 @@ main { max-width:1100px; margin:0 auto; padding:20px 16px 40px; }
 .viewer-toolbar button:hover { border-color:var(--red); }
 .viewer-body {
   flex:1; display:flex; align-items:center; justify-content:center;
-  overflow:auto; padding:20px;
-  /* 🔒 禁止文本选择 */
+  overflow:auto; padding:20px; position:relative;
   -webkit-user-select:none; user-select:none;
 }
-/* 🔒 PDF查看器遮罩：拦截右键菜单（Chrome内置PDF查看器右键无法通过外层DOM拦截） */
-.pdf-guard-wrapper { position:relative; width:100%; height:100%; }
-.pdf-guard-wrapper iframe { position:relative; z-index:1; width:100%; height:100%; border:none; background:#fff; border-radius:8px; }
-.pdf-guard-overlay {
-  position:absolute; inset:0; z-index:2; background:transparent;
-}
+/* 🔒 PDF查看器：使用PDF.js canvas渲染，完全掌控右键和滚轮 */
+.pdf-canvas-container { width:100%; height:100%; overflow:auto; background:#525659; display:flex; flex-direction:column; align-items:center; padding:10px 0; }
+.pdf-canvas-container canvas { display:block; margin:0 auto 8px auto; box-shadow:0 2px 8px rgba(0,0,0,0.5); }
 .viewer-body img { max-width:100%; max-height:100%; object-fit:contain; border-radius:8px; }
 .viewer-body .viewer-unsupported { text-align:center; color:var(--text2); }
 .viewer-body .viewer-unsupported button {
@@ -349,10 +345,11 @@ main { max-width:1100px; margin:0 auto; padding:20px 16px 40px; }
   opacity:0.03; font-size:4em; color:#fff; white-space:nowrap;
   transform:rotate(-25deg); letter-spacing:0.3em;
 }
-/* 📊 加载进度条 */
+/* 📊 加载进度条（覆盖在canvas上方） */
 .viewer-progress {
   display:flex; flex-direction:column; align-items:center; justify-content:center;
-  gap:16px; color:var(--text); padding:40px;
+  gap:16px; color:#fff; padding:40px;
+  position:absolute; inset:0; z-index:10; background:rgba(0,0,0,0.7);
 }
 .viewer-progress-bar {
   width:300px; height:8px; background:var(--border); border-radius:4px; overflow:hidden;
@@ -363,6 +360,7 @@ main { max-width:1100px; margin:0 auto; padding:20px 16px 40px; }
 }
 .viewer-progress-text { font-size:0.9em; color:var(--text2); }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
 
@@ -1675,21 +1673,62 @@ function openViewer(bookId) {
         if (controller.signal.aborted) return;
         currentBlobUrl = URL.createObjectURL(blob);
         if (ext === 'pdf') {
-          body.innerHTML = '<div class="pdf-guard-wrapper" id="pdfGuard">' +
-            '<iframe src="' + currentBlobUrl + '#toolbar=0&navpanes=0&scrollbar=1&statusbar=0"></iframe>' +
-            '<div class="pdf-guard-overlay" id="pdfGuardOverlay"></div></div>';
-          var ov = document.getElementById('pdfGuardOverlay');
-          if (ov) {
-            // 🔒 拦截右键
-            ov.addEventListener('contextmenu', function(e){ e.preventDefault(); e.stopPropagation(); return false; });
-            // 🔒 滚轮转发到iframe内部（blob URL同源，contentWindow可访问）
-            ov.addEventListener('wheel', function(e){
-              e.preventDefault();
-              var iframe = document.querySelector('#pdfGuard iframe');
-              if (iframe) {
-                try { iframe.contentWindow.scrollBy(0, e.deltaY); } catch(_) {}
+          // 🔒 使用 PDF.js canvas 渲染（完全掌控右键和滚轮，无需Chrome内置PDF查看器）
+          var container = document.createElement('div');
+          container.className = 'pdf-canvas-container';
+          container.id = 'pdfCanvasContainer';
+          container.oncontextmenu = function(){ return false; };
+          container.style.flex = '1';
+          body.appendChild(container);
+
+          // 配置 PDF.js worker
+          if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            pdfjsLib.getDocument(currentBlobUrl).promise.then(function(pdf) {
+              var totalPages = pdf.numPages;
+              var loadedPages = 0;
+              var textEl = document.getElementById('viewerProgressText');
+              if (textEl) textEl.textContent = '共 ' + totalPages + ' 页，正在渲染…';
+
+              // 渲染所有页面
+              var renderPromises = [];
+              for (var pageNum = 1; pageNum <= totalPages; pageNum++) {
+                renderPromises.push(
+                  pdf.getPage(pageNum).then(function(page) {
+                    var scale = 1.0;
+                    var viewport = page.getViewport({scale: scale});
+                    var canvas = document.createElement('canvas');
+                    canvas.style.width = 'auto';
+                    canvas.style.maxWidth = '100%';
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    canvas.oncontextmenu = function(){ return false; };
+                    container.appendChild(canvas);
+
+                    return page.render({
+                      canvasContext: canvas.getContext('2d'),
+                      viewport: viewport
+                    }).promise.then(function() {
+                      loadedPages++;
+                      var pct = Math.round(loadedPages / totalPages * 100);
+                      var fill = document.getElementById('viewerProgressFill');
+                      if (fill) fill.style.width = pct + '%';
+                      if (textEl) textEl.textContent = pct + '% — ' + loadedPages + '/' + totalPages + ' 页';
+                    });
+                  })
+                );
               }
-            }, {passive: false});
+
+              return Promise.all(renderPromises);
+            }).then(function() {
+              // 渲染完成后隐藏进度条
+              var prog = body.querySelector('.viewer-progress');
+              if (prog) prog.style.display = 'none';
+            }).catch(function(err) {
+              body.innerHTML = '<div style="color:var(--red);text-align:center;padding:60px;"><p>❌ PDF加载失败</p><p style="font-size:0.85em;">' + err.message + '</p></div>';
+            });
+          } else {
+            body.innerHTML = '<div style="color:var(--red);text-align:center;padding:60px;"><p>❌ PDF查看器加载失败</p></div>';
           }
         } else if (ext === 'jpg' || ext === 'jpeg' || ext === 'png') {
           body.innerHTML = '<img src="' + currentBlobUrl + '" alt="' + escHtml(book.name) + '" style="pointer-events:none;max-width:100%;max-height:100%;object-fit:contain;" draggable="false">';
