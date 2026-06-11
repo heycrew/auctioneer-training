@@ -2219,9 +2219,7 @@ function appendMoreQuestions() {
     html += `<div class="q-title">${q.title}</div>`;
     html += `</div>`;
   });
-  const sentinel = document.getElementById('scrollSentinel');
-  if (sentinel) sentinel.insertAdjacentHTML('beforebegin', html);
-  else container.insertAdjacentHTML('beforeend', html);
+  container.insertAdjacentHTML('beforeend', html);
   // 更新分页
   const shown = Math.min((currentPage+1) * PAGE_SIZE, currentQuestions.length);
   let pagHtml = `<span style="color:var(--text2);font-size:0.9em;">已显示 ${shown} / ${currentQuestions.length} 题（下滑自动加载）</span>`;

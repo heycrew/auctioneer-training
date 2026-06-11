@@ -2198,13 +2198,8 @@ function appendMoreQuestions() {
     html += `</div>`;
   });
 
-  // 插入到 sentinel 之前
-  const sentinel = document.getElementById('scrollSentinel');
-  if (sentinel) {
-    sentinel.insertAdjacentHTML('beforebegin', html);
-  } else {
-    container.insertAdjacentHTML('beforeend', html);
-  }
+  // 追加到题目容器末尾（不是 pagination 里！sentinel 在 pagination 中）
+  container.insertAdjacentHTML('beforeend', html);
 
   // 恢复已显示的答案
   pageQs.forEach(q => {
