@@ -1468,6 +1468,7 @@ async function tryAutoLogin() {
   // 后台加载数据
   try {
     appState = await loadStateFromServer();
+    applyFilters();  // 🔧 加载完进度后重新筛选，隐藏已做对的题
     updateProgressBar();
   } catch(e) {}
   // 后台验证 token 有效性

@@ -1476,6 +1476,7 @@ function login() {
   // 登录成功
   currentUser = { username: user.username, isAdmin: user.isAdmin };
   appState = loadState();
+  applyFilters();  // 🔧 加载进度后重新筛选，隐藏已做对的题
   document.getElementById('loginOverlay').style.display = 'none';
   document.getElementById('app-container').style.display = '';
   document.getElementById('displayUser').textContent = user.username + (user.isAdmin ? ' [管理员]' : '');
